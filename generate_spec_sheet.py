@@ -2,13 +2,14 @@
 """
 Generate full specification sheets for polyhedra
 - 3D shaded view (top left)
-- Unfolded layout (main area)
+- Unfolded layout (main area) - using Steepest Edge Unfolding
 - Statistics box (F, V, E, surface-to-volume ratio)
 """
 
 import numpy as np
 from pathlib import Path
 import math
+from steepest_edge_unfold import steepest_edge_unfold
 
 
 def load_obj(filename):
@@ -138,71 +139,10 @@ def calculate_face_depth(vertices, face, view_direction=np.array([0, 0, 1])):
     return 0
 
 
-def unfold_simple(vertices, faces):
-    """Simple grid layout for unfolded view with proper 3D->2D projection"""
-    unfolded_faces = []
-    
-    # Calculate average face size from 3D geometry
-    face_sizes = []
-    for face in faces[:min(10, len(faces))]:  # Sample first 10 faces
-        face_verts = vertices[face]
-        if len(face_verts) >= 3:
-            # Calculate perimeter as size metric
-            perimeter = 0
-            for i in range(len(face_verts)):
-                v1 = face_verts[i]
-                v2 = face_verts[(i + 1) % len(face_verts)]
-                perimeter += np.linalg.norm(v2 - v1)
-            face_sizes.append(perimeter)
-    
-    avg_size = np.mean(face_sizes) if face_sizes else 1.0
-    
-    cols = int(np.ceil(np.sqrt(len(faces))))
-    
-    for i, face in enumerate(faces):
-        row = i // cols
-        col = i % cols
-        
-        face_verts = vertices[face]
-        
-        # Project face to its local 2D plane
-        if len(face_verts) >= 3:
-            # Calculate face normal
-            v1, v2, v3 = face_verts[0], face_verts[1], face_verts[2]
-            edge1 = v2 - v1
-            edge2 = v3 - v1
-            normal = np.cross(edge1, edge2)
-            normal = normal / (np.linalg.norm(normal) + 1e-10)
-            
-            # Create local coordinate system
-            u = edge1 / (np.linalg.norm(edge1) + 1e-10)
-            v = np.cross(normal, u)
-            v = v / (np.linalg.norm(v) + 1e-10)
-            
-            # Project vertices to 2D
-            face_2d = []
-            for vert in face_verts:
-                relative = vert - v1
-                x = np.dot(relative, u)
-                y = np.dot(relative, v)
-                face_2d.append([x, y])
-            
-            face_2d = np.array(face_2d)
-        else:
-            # Fallback for degenerate faces
-            face_2d = face_verts[:, :2]
-        
-        # Center the face
-        center = np.mean(face_2d, axis=0)
-        face_2d = face_2d - center
-        
-        # Position in grid
-        offset = np.array([col * avg_size * 1.2, row * avg_size * 1.2])
-        face_2d = face_2d + offset
-        
-        unfolded_faces.append(face_2d)
-    
-    return unfolded_faces
+def unfold_proper(vertices, faces):
+    """Use Steepest Edge Unfolding algorithm"""
+    # Returns dict of {face_idx: 2d_vertices}
+    return steepest_edge_unfold(vertices, faces)
 
 
 def create_spec_sheet(obj_file, output_file):
@@ -326,16 +266,34 @@ def create_spec_sheet(obj_file, output_file):
     # === UNFOLDED VIEW ===
     svg.append(f'<rect x="{unfold_x}" y="{unfold_y}" width="{unfold_width}" height="{unfold_height}" fill="white" stroke="#ccc" stroke-width="2"/>')
     
-    # Unfold layout
-    unfolded = unfold_simple(vertices, faces)
+    # Unfold layout using Steepest Edge algorithm
+    unfolded_dict = unfold_proper(vertices, faces)
+    
+    # Convert dict to list format
+    unfolded = []
+    for i in range(len(faces)):
+        if i in unfolded_dict:
+            unfolded.append(unfolded_dict[i])
+        else:
+            # Face not unfolded, skip it
+            unfolded.append(np.array([[0, 0]]))
     
     # Scale and position unfolded view
-    all_unfold_points = np.vstack(unfolded)
+    # Filter out unplaced faces
+    valid_faces = [f for f in unfolded if len(f) > 1]
+    if not valid_faces:
+        print("  ⚠️  No faces unfolded")
+        return
+    
+    all_unfold_points = np.vstack(valid_faces)
     min_unfold = all_unfold_points.min(axis=0)
     max_unfold = all_unfold_points.max(axis=0)
     range_unfold = max_unfold - min_unfold
     
-    scale_unfold = min(unfold_width * 0.85 / range_unfold[0], unfold_height * 0.85 / range_unfold[1])
+    if range_unfold[0] < 1e-10 or range_unfold[1] < 1e-10:
+        scale_unfold = 100
+    else:
+        scale_unfold = min(unfold_width * 0.85 / range_unfold[0], unfold_height * 0.85 / range_unfold[1])
     center_unfold = (min_unfold + max_unfold) / 2
     
     # Color palette
@@ -343,6 +301,9 @@ def create_spec_sheet(obj_file, output_file):
               '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd']
     
     for i, face_2d in enumerate(unfolded):
+        if len(face_2d) <= 1:
+            continue  # Skip unplaced faces
+            
         # Scale and position
         face_scaled = (face_2d - center_unfold) * scale_unfold
         face_scaled[:, 0] += unfold_x + unfold_width / 2
@@ -362,9 +323,10 @@ def create_spec_sheet(obj_file, output_file):
         svg.append(f'<text x="{center[0]:.2f}" y="{center[1]:.2f}" text-anchor="middle" font-size="10" font-weight="bold">{i+1}</text>')
     
     # Footer
+    placed_count = len([f for f in unfolded if len(f) > 1])
     svg.extend([
         f'<text x="{page_width/2}" y="{page_height - 15}" text-anchor="middle" font-size="10" fill="#666">',
-        'Generated by Geodesic Dome Generator | Unfolding algorithm: Grid layout (Rust spiral unfolder in development)',
+        f'Generated by Geodesic Dome Generator | Steepest Edge Unfolding: {placed_count}/{len(faces)} faces placed',
         '</text>',
         '</svg>'
     ])

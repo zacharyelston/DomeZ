@@ -31,47 +31,47 @@
 <tspan x="60" dy="18">S/V Ratio: 3.7752 m⁻¹</tspan>
 </text>
 <rect x="430" y="100" width="730" height="760" fill="white" stroke="#ccc" stroke-width="2"/>
-<polygon points="484.75,244.98 525.04,244.98 504.90,279.87" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="504.90" y="256.61" text-anchor="middle" font-size="10" font-weight="bold">1</text>
-<polygon points="629.80,244.98 670.09,244.98 649.95,279.87" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="649.95" y="256.61" text-anchor="middle" font-size="10" font-weight="bold">2</text>
-<polygon points="774.85,244.98 815.15,244.98 795.00,279.87" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="256.61" text-anchor="middle" font-size="10" font-weight="bold">3</text>
-<polygon points="919.91,244.98 960.20,244.98 940.05,279.87" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="940.05" y="256.61" text-anchor="middle" font-size="10" font-weight="bold">4</text>
-<polygon points="1064.96,244.98 1105.25,244.98 1085.10,279.87" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1085.10" y="256.61" text-anchor="middle" font-size="10" font-weight="bold">5</text>
-<polygon points="484.75,390.03 525.04,390.03 504.90,424.92" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="504.90" y="401.66" text-anchor="middle" font-size="10" font-weight="bold">6</text>
-<polygon points="629.80,390.03 670.09,390.03 649.95,424.92" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="649.95" y="401.66" text-anchor="middle" font-size="10" font-weight="bold">7</text>
-<polygon points="774.85,390.03 815.15,390.03 795.00,424.92" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="401.66" text-anchor="middle" font-size="10" font-weight="bold">8</text>
-<polygon points="919.91,390.03 960.20,390.03 940.05,424.92" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="940.05" y="401.66" text-anchor="middle" font-size="10" font-weight="bold">9</text>
-<polygon points="1064.96,390.03 1105.25,390.03 1085.10,424.92" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1085.10" y="401.66" text-anchor="middle" font-size="10" font-weight="bold">10</text>
-<polygon points="484.75,535.08 525.04,535.08 504.90,569.97" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="504.90" y="546.71" text-anchor="middle" font-size="10" font-weight="bold">11</text>
-<polygon points="629.80,535.08 670.09,535.08 649.95,569.97" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="649.95" y="546.71" text-anchor="middle" font-size="10" font-weight="bold">12</text>
-<polygon points="774.85,535.08 815.15,535.08 795.00,569.97" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="546.71" text-anchor="middle" font-size="10" font-weight="bold">13</text>
-<polygon points="919.91,535.08 960.20,535.08 940.05,569.97" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="940.05" y="546.71" text-anchor="middle" font-size="10" font-weight="bold">14</text>
-<polygon points="1064.96,535.08 1105.25,535.08 1085.10,569.97" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1085.10" y="546.71" text-anchor="middle" font-size="10" font-weight="bold">15</text>
-<polygon points="484.75,680.13 525.04,680.13 504.90,715.02" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="504.90" y="691.76" text-anchor="middle" font-size="10" font-weight="bold">16</text>
-<polygon points="629.80,680.13 670.09,680.13 649.95,715.02" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="649.95" y="691.76" text-anchor="middle" font-size="10" font-weight="bold">17</text>
-<polygon points="774.85,680.13 815.15,680.13 795.00,715.02" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="691.76" text-anchor="middle" font-size="10" font-weight="bold">18</text>
-<polygon points="919.91,680.13 960.20,680.13 940.05,715.02" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="940.05" y="691.76" text-anchor="middle" font-size="10" font-weight="bold">19</text>
-<polygon points="1064.96,680.13 1105.25,680.13 1085.10,715.02" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1085.10" y="691.76" text-anchor="middle" font-size="10" font-weight="bold">20</text>
+<polygon points="653.98,528.85 766.80,528.85 710.39,626.56" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="710.39" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="653.98,528.85 597.57,431.15 710.39,431.15" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="653.98" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="653.98,528.85 597.57,626.56 541.16,528.85" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="597.57" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="653.98,528.85 766.80,528.85 710.39,626.56" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="710.39" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="936.02,431.15 1048.84,431.15 992.43,528.85" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="992.43" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="484.75,431.15 597.57,431.15 541.16,528.85" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="541.16" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="823.20,431.15 766.80,528.85 710.39,431.15" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="766.80" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="992.43,528.85 936.02,626.56 879.61,528.85" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="936.02" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<polygon points="823.20,431.15 766.80,528.85 710.39,431.15" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="766.80" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">9</text>
+<polygon points="992.43,528.85 936.02,626.56 879.61,528.85" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="936.02" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">10</text>
+<polygon points="879.61,333.44 992.43,333.44 936.02,431.15" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="936.02" y="366.01" text-anchor="middle" font-size="10" font-weight="bold">11</text>
+<polygon points="879.61,333.44 823.20,235.74 936.02,235.74" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="879.61" y="268.31" text-anchor="middle" font-size="10" font-weight="bold">12</text>
+<polygon points="879.61,333.44 823.20,431.15 766.80,333.44" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="823.20" y="366.01" text-anchor="middle" font-size="10" font-weight="bold">13</text>
+<polygon points="879.61,333.44 992.43,333.44 936.02,431.15" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="936.02" y="366.01" text-anchor="middle" font-size="10" font-weight="bold">14</text>
+<polygon points="992.43,528.85 1105.25,528.85 1048.84,626.56" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1048.84" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">15</text>
+<polygon points="936.02,431.15 879.61,528.85 823.20,431.15" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="879.61" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">16</text>
+<polygon points="879.61,528.85 823.20,626.56 766.80,528.85" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="823.20" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">17</text>
+<polygon points="936.02,431.15 879.61,528.85 823.20,431.15" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="879.61" y="463.72" text-anchor="middle" font-size="10" font-weight="bold">18</text>
+<polygon points="879.61,528.85 823.20,626.56 766.80,528.85" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="823.20" y="561.42" text-anchor="middle" font-size="10" font-weight="bold">19</text>
+<polygon points="1048.84,626.56 992.43,724.26 936.02,626.56" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="992.43" y="659.12" text-anchor="middle" font-size="10" font-weight="bold">20</text>
 <text x="600.0" y="885" text-anchor="middle" font-size="10" fill="#666">
-Generated by Geodesic Dome Generator | Unfolding algorithm: Grid layout (Rust spiral unfolder in development)
+Generated by Geodesic Dome Generator | Steepest Edge Unfolding: 20/20 faces placed
 </text>
 </svg>

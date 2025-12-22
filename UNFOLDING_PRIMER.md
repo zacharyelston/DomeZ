@@ -464,11 +464,38 @@ python3 test_unfolding.py
 - arXiv:2405.07922v1 [cs.GR]
 - **Key contribution:** Progressive mesh simplification + Tabu Search
 - **Results:** 97%+ success rate, 50-100x faster than previous methods
+- **Innovation:** Combines edge collapse with robust unfolding, handles not-unfoldable input
+
+**O'Rourke (2008):** "Unfolding Orthogonal Polyhedra"
+- Contemporary Mathematics survey paper
+- **Comprehensive review** of orthogonal polyhedra unfolding results
+- **Key classes:** Orthostacks, orthotubes, Manhattan towers, orthotrees
+- **Grid refinement:** From 1×1 to O(n²) refinement strategies
+
+**Xi & Lien (2015):** "Continuous Unfolding of Polyhedra – a Motion Planning Approach"
+- IEEE ICRA 2015
+- **Motion planning** approach to continuous unfolding
+- **Discrete sampling:** 70%+ valid configurations vs 0.06% for continuous sampling
+- **Key insight:** Configuration space is sparse but linearly connectable
+- **Blooming conjecture:** Convex polyhedra unfold continuously via Steepest Edge
+
+**Damian, Demaine & Flatland:** "Unfolding Orthogonal Polyhedra with Quadratic Refinement"
+- Graphs and Combinatorics
+- **Delta-unfolding algorithm:** Reduces refinement from exponential to O(n²)
+- **Heavy-path decomposition:** Key technique from data structures applied to geometry
+- **Proves:** Every orthogonal polyhedron unfolds with polynomial cuts
+
+**Iacob (2024):** "Polyhedra Folding Algorithms"
+- Bachelor's thesis, Radboud University
+- **Accessible introduction** to computational geometry folding
+- **Practical applications:** Medicine, manufacturing, robotics, architecture, origami
+- **Historical context:** From Dürer (1525) to modern computational methods
 
 **Demaine & O'Rourke (2007):** "Geometric Folding Algorithms: Linkages, Origami, Polyhedra"
 - Cambridge University Press
-- **Definitive textbook** on unfolding theory
+- **Definitive textbook** on unfolding theory (400+ pages)
 - Chapter 22: Unfolding polyhedra
+- **Open problems:** Convex polyhedra edge-unfolding still unsolved
 
 **Takahashi et al. (2011):** "Optimized topological surgery for unfolding 3D meshes"
 - Computer Graphics Forum 30(7)

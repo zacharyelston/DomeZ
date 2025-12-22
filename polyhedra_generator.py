@@ -163,6 +163,48 @@ class PolyhedraGenerator:
         
         return vertices, faces
     
+    def generate_stella_octangula(self):
+        """Generate stella octangula (compound of two tetrahedra) (8 faces, 8 vertices)"""
+        # Stella octangula = two interpenetrating tetrahedra
+        # Forms an 8-pointed star
+        
+        # First tetrahedron (regular orientation)
+        a = 1.0 / np.sqrt(3)
+        tetra1 = [
+            Vector3( a,  a,  a),
+            Vector3( a, -a, -a),
+            Vector3(-a,  a, -a),
+            Vector3(-a, -a,  a),
+        ]
+        
+        # Second tetrahedron (inverted/dual orientation)
+        tetra2 = [
+            Vector3(-a, -a, -a),
+            Vector3(-a,  a,  a),
+            Vector3( a, -a,  a),
+            Vector3( a,  a, -a),
+        ]
+        
+        # Combine vertices
+        vertices = tetra1 + tetra2
+        
+        # Normalize to unit sphere
+        vertices = [v.normalize() for v in vertices]
+        
+        # Faces from first tetrahedron
+        faces = [
+            (0, 2, 1),  # Tetra1 faces
+            (0, 1, 3),
+            (0, 3, 2),
+            (1, 2, 3),
+            (4, 5, 6),  # Tetra2 faces
+            (4, 6, 7),
+            (4, 7, 5),
+            (5, 7, 6),
+        ]
+        
+        return vertices, faces
+    
     def generate_truncated_icosahedron(self):
         """Generate truncated icosahedron (soccer ball) (32 faces, 60 vertices)"""
         # This is the classic soccer ball shape
@@ -190,6 +232,7 @@ class PolyhedraGenerator:
             'octahedron': self.generate_octahedron,
             'dodecahedron': self.generate_dodecahedron,
             'icosahedron': self.generate_icosahedron,
+            'stella_octangula': self.generate_stella_octangula,
         }
         
         if self.polyhedron_type not in generators:
@@ -296,7 +339,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Generate Platonic solids and other polyhedra')
     parser.add_argument('-t', '--type', 
-                        choices=['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'all'],
+                        choices=['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'stella_octangula', 'all'],
                         default='all',
                         help='Polyhedron type (default: all)')
     parser.add_argument('-f', '--frequency', type=int, default=1,
@@ -314,7 +357,7 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
     
-    types = ['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron'] \
+    types = ['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'stella_octangula'] \
             if args.type == 'all' else [args.type]
     
     for poly_type in types:

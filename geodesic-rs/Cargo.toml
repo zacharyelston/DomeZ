@@ -7,12 +7,37 @@ description = "High-performance geodesic dome and polyhedra generator with unfol
 license = "MIT"
 
 [dependencies]
-nalgebra = "0.32"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# CLI & Configuration
 clap = { version = "4.4", features = ["derive"] }
+config = "0.14"
+
+# Error Handling
 anyhow = "1.0"
 thiserror = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Math & Geometry
+nalgebra = "0.32"
+
+# File I/O
+walkdir = "2.4"
+
+# Parallel Processing
+rayon = "1.8"
+
+# Progress Indicators
+indicatif = "0.17"
+
+# Export Formats
+dxf = "0.6"
+svg = "0.13"
 
 [[bin]]
 name = "geodesic-unfolder"

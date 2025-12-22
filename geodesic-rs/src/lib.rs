@@ -9,12 +9,8 @@
 //! - Unfolded: Spiral unfolding from center for manufacturing
 
 pub mod geometry;
-pub mod polyhedra;
-pub mod output;
-pub mod unfold;
 
 use nalgebra::{Vector3, Point3};
-use std::collections::{HashMap, HashSet};
 
 pub type Vec3 = Vector3<f64>;
 pub type Pt3 = Point3<f64>;

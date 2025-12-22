@@ -1,0 +1,77 @@
+<svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="900" fill="#f5f5f5"/>
+<text x="600.0" y="35" text-anchor="middle" font-size="24" font-weight="bold">Icosahedron - Specification Sheet</text>
+<text x="40" y="90" font-size="14" font-weight="bold">3D View</text>
+<text x="430" y="90" font-size="14" font-weight="bold">Unfolded Layout</text>
+<rect x="40" y="100" width="350" height="350" fill="white" stroke="#ccc" stroke-width="2"/>
+<polygon points="186.66,372.35 92.50,303.06 161.52,246.94" fill="rgb(150,150,150)" stroke="#333" stroke-width="1.5"/>
+<polygon points="161.52,246.94 92.50,303.06 134.58,177.65" fill="rgb(150,150,150)" stroke="#333" stroke-width="1.5"/>
+<polygon points="243.34,177.65 268.48,303.06 337.50,246.94" fill="rgb(150,150,150)" stroke="#333" stroke-width="1.5"/>
+<polygon points="337.50,246.94 268.48,303.06 295.42,372.35" fill="rgb(150,150,150)" stroke="#333" stroke-width="1.5"/>
+<polygon points="186.66,372.35 286.93,289.77 295.42,372.35" fill="rgb(185,185,185)" stroke="#333" stroke-width="1.5"/>
+<polygon points="243.34,177.65 254.75,169.44 134.58,177.65" fill="rgb(185,185,185)" stroke="#333" stroke-width="1.5"/>
+<polygon points="186.66,372.35 161.52,246.94 286.93,289.77" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="295.42,372.35 286.93,289.77 337.50,246.94" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="243.34,177.65 337.50,246.94 254.75,169.44" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="134.58,177.65 254.75,169.44 161.52,246.94" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="286.93,289.77 161.52,246.94 254.75,169.44" fill="rgb(243,243,243)" stroke="#333" stroke-width="1.5"/>
+<polygon points="254.75,169.44 337.50,246.94 286.93,289.77" fill="rgb(243,243,243)" stroke="#333" stroke-width="1.5"/>
+<rect x="40" y="470" width="350" height="200" fill="white" stroke="#333" stroke-width="2" rx="5"/>
+<text x="50" y="495" font-size="14" font-weight="bold">Statistics</text>
+<text x="60" y="525" font-size="12" font-family="monospace">
+<tspan x="60" dy="0">Vertices (V): 12</tspan>
+<tspan x="60" dy="20">Edges (E): 30</tspan>
+<tspan x="60" dy="20">Faces (F): 20</tspan>
+<tspan x="60" dy="20">Euler: V-E+F = 2</tspan>
+</text>
+<line x1="50" y1="595" x2="380" y2="595" stroke="#ccc" stroke-width="1"/>
+<text x="60" y="615" font-size="11" font-family="monospace">
+<tspan x="60" dy="0">Surface Area: 9.5745 m²</tspan>
+<tspan x="60" dy="18">Volume: 2.5362 m³</tspan>
+<tspan x="60" dy="18">S/V Ratio: 3.7752 m⁻¹</tspan>
+</text>
+<rect x="430" y="100" width="730" height="760" fill="white" stroke="#ccc" stroke-width="2"/>
+<polygon points="525.58,315.74 491.73,227.10 580.37,281.89" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="532.56" y="274.91" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="610.74,286.20 665.52,252.34 720.31,286.20" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="665.52" y="274.91" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="743.70,286.20 853.27,286.20 798.49,252.34" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="798.49" y="274.91" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="924.48,315.74 979.26,281.89 890.62,227.10" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="931.45" y="274.91" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="1086.99,334.01 1053.13,245.36 1053.13,245.36" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1064.42" y="274.91" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="539.53,448.71 484.75,414.85 573.39,360.07" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="532.56" y="407.87" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="695.07,462.66 606.43,407.87 695.07,353.09" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="665.52" y="407.87" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="787.20,437.42 787.20,437.42 821.06,348.78" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="798.49" y="407.87" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<polygon points="872.36,407.87 961.00,462.66 961.00,353.09" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="931.45" y="407.87" text-anchor="middle" font-size="10" font-weight="bold">9</text>
+<polygon points="1016.61,414.85 1071.39,448.71 1105.25,360.07" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1064.42" y="407.87" text-anchor="middle" font-size="10" font-weight="bold">10</text>
+<polygon points="539.53,500.01 573.39,588.65 484.75,533.86" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="532.56" y="540.84" text-anchor="middle" font-size="10" font-weight="bold">11</text>
+<polygon points="720.31,529.55 665.52,563.41 610.74,529.55" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="665.52" y="540.84" text-anchor="middle" font-size="10" font-weight="bold">12</text>
+<polygon points="853.27,529.55 743.70,529.55 798.49,563.41" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="798.49" y="540.84" text-anchor="middle" font-size="10" font-weight="bold">13</text>
+<polygon points="938.43,500.01 883.64,533.86 972.29,588.65" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="931.45" y="540.84" text-anchor="middle" font-size="10" font-weight="bold">14</text>
+<polygon points="1041.84,481.74 1075.70,570.39 1075.70,570.39" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1064.42" y="540.84" text-anchor="middle" font-size="10" font-weight="bold">15</text>
+<polygon points="503.01,619.02 591.65,673.80 503.01,728.59" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="532.56" y="673.80" text-anchor="middle" font-size="10" font-weight="bold">16</text>
+<polygon points="658.55,632.97 713.33,666.83 624.69,721.61" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="665.52" y="673.80" text-anchor="middle" font-size="10" font-weight="bold">17</text>
+<polygon points="846.30,666.83 791.51,632.97 757.65,721.61" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="798.49" y="673.80" text-anchor="middle" font-size="10" font-weight="bold">18</text>
+<polygon points="990.55,673.80 901.90,619.02 901.90,728.59" fill="#d9d9d9" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="931.45" y="673.80" text-anchor="middle" font-size="10" font-weight="bold">19</text>
+<polygon points="1075.70,644.26 1075.70,644.26 1041.84,732.90" fill="#bc80bd" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1064.42" y="673.80" text-anchor="middle" font-size="10" font-weight="bold">20</text>
+<text x="600.0" y="885" text-anchor="middle" font-size="10" fill="#666">
+Generated by Geodesic Dome Generator | Unfolding algorithm: Grid layout (Rust spiral unfolder in development)
+</text>
+</svg>

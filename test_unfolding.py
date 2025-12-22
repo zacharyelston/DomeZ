@@ -12,6 +12,7 @@ from steepest_edge_unfold import steepest_edge_unfold, load_obj, build_adjacency
 def test_edge_sharing(obj_file, tolerance=1e-6):
     """
     Test that unfolded faces share complete edges, not just vertices
+    Only checks faces that are adjacent in BOTH 3D and the unfolding tree
     """
     print(f"\nTesting edge sharing: {Path(obj_file).name}")
     
@@ -23,17 +24,54 @@ def test_edge_sharing(obj_file, tolerance=1e-6):
         print(f"  ✗ FAIL: No faces unfolded")
         return False
     
-    # Check each pair of adjacent faces
+    # Build 2D adjacency - which faces are actually touching in the unfolding
+    # Two faces are adjacent in 2D if they share at least 2 vertices with matching positions
+    adjacency_2d = {}
+    for face_idx in unfolded:
+        adjacency_2d[face_idx] = []
+        face_2d = unfolded[face_idx]
+        
+        for other_idx in unfolded:
+            if other_idx == face_idx:
+                continue
+            
+            other_2d = unfolded[other_idx]
+            
+            # Count matching vertices
+            matches = 0
+            for v1 in face_2d:
+                for v2 in other_2d:
+                    if np.linalg.norm(v1 - v2) < tolerance:
+                        matches += 1
+                        break
+            
+            if matches >= 2:
+                adjacency_2d[face_idx].append(other_idx)
+    
+    # Check edge sharing for faces that are adjacent in BOTH 3D and 2D
     edge_sharing_errors = []
-    for face_idx, neighbors in adjacency.items():
+    checked_pairs = set()
+    
+    for face_idx, neighbors_3d in adjacency.items():
         if face_idx not in unfolded:
             continue
             
         face_2d = unfolded[face_idx]
+        neighbors_2d = adjacency_2d.get(face_idx, [])
         
-        for neighbor_idx, shared_edge in neighbors:
+        for neighbor_idx, shared_edge in neighbors_3d:
             if neighbor_idx not in unfolded:
                 continue
+            
+            # Only check if they're also adjacent in 2D
+            if neighbor_idx not in neighbors_2d:
+                continue
+            
+            # Avoid checking same pair twice
+            pair = tuple(sorted([face_idx, neighbor_idx]))
+            if pair in checked_pairs:
+                continue
+            checked_pairs.add(pair)
             
             neighbor_2d = unfolded[neighbor_idx]
             

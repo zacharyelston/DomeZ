@@ -1,0 +1,61 @@
+<svg width="695" height="685" xmlns="http://www.w3.org/2000/svg">
+<rect width="695" height="685" fill="white"/>
+<text x="347.5" y="30" text-anchor="middle" font-size="20" font-weight="bold">Unfolded Icosahedron</text>
+<text x="347.5" y="55" text-anchor="middle" font-size="14">12 vertices, 20 faces</text>
+<g opacity="0.2">
+<line x1="95.8794" y1="130" x2="95.8794" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="195.8794" y1="130" x2="195.8794" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="295.87940000000003" y1="130" x2="295.87940000000003" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="395.87940000000003" y1="130" x2="395.87940000000003" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="495.87940000000003" y1="130" x2="495.87940000000003" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="595.8794" y1="130" x2="595.8794" y2="635" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="175.8794" x2="645" y2="175.8794" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="275.87940000000003" x2="645" y2="275.87940000000003" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="375.87940000000003" x2="645" y2="375.87940000000003" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="475.87940000000003" x2="645" y2="475.87940000000003" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="575.8794" x2="645" y2="575.8794" stroke="gray" stroke-width="0.5"/>
+</g>
+<polygon points="89.19,215.07 56.69,130.00 141.76,182.57" fill="#8dd3c7" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="95.88" y="175.88" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="170.90,186.71 223.48,154.22 276.05,186.71" fill="#ffffb3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="223.48" y="175.88" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="298.50,186.71 403.65,186.71 351.07,154.22" fill="#bebada" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="351.07" y="175.88" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="471.98,215.07 524.55,182.57 439.49,130.00" fill="#fb8072" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="478.67" y="175.88" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="627.93,232.59 595.44,147.52 595.44,147.52" fill="#80b1d3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="606.27" y="175.88" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="102.57,342.66 50.00,310.17 135.07,257.60" fill="#fdb462" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="95.88" y="303.48" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="251.83,356.05 166.77,303.48 251.83,250.90" fill="#b3de69" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="223.48" y="303.48" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="340.24,331.83 340.24,331.83 372.74,246.77" fill="#fccde5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="351.07" y="303.48" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<polygon points="421.96,303.48 507.03,356.05 507.03,250.90" fill="#d9d9d9" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="478.67" y="303.48" text-anchor="middle" font-size="10" font-weight="bold">9</text>
+<polygon points="560.39,310.17 612.96,342.66 645.46,257.60" fill="#bc80bd" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="606.27" y="303.48" text-anchor="middle" font-size="10" font-weight="bold">10</text>
+<polygon points="102.57,391.89 135.07,476.95 50.00,424.38" fill="#ccebc5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="95.88" y="431.07" text-anchor="middle" font-size="10" font-weight="bold">11</text>
+<polygon points="276.05,420.24 223.48,452.74 170.90,420.24" fill="#ffed6f" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="223.48" y="431.07" text-anchor="middle" font-size="10" font-weight="bold">12</text>
+<polygon points="403.65,420.24 298.50,420.24 351.07,452.74" fill="#8dd3c7" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="351.07" y="431.07" text-anchor="middle" font-size="10" font-weight="bold">13</text>
+<polygon points="485.37,391.89 432.79,424.38 517.86,476.95" fill="#ffffb3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="478.67" y="431.07" text-anchor="middle" font-size="10" font-weight="bold">14</text>
+<polygon points="584.61,374.36 617.10,459.43 617.10,459.43" fill="#bebada" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="606.27" y="431.07" text-anchor="middle" font-size="10" font-weight="bold">15</text>
+<polygon points="67.52,506.10 152.59,558.67 67.52,611.25" fill="#fb8072" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="95.88" y="558.67" text-anchor="middle" font-size="10" font-weight="bold">16</text>
+<polygon points="216.78,519.49 269.36,551.98 184.29,604.55" fill="#80b1d3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="223.48" y="558.67" text-anchor="middle" font-size="10" font-weight="bold">17</text>
+<polygon points="396.95,551.98 344.38,519.49 311.89,604.55" fill="#fdb462" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="351.07" y="558.67" text-anchor="middle" font-size="10" font-weight="bold">18</text>
+<polygon points="535.38,558.67 450.32,506.10 450.32,611.25" fill="#b3de69" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="478.67" y="558.67" text-anchor="middle" font-size="10" font-weight="bold">19</text>
+<polygon points="617.10,530.32 617.10,530.32 584.61,615.38" fill="#fccde5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="606.27" y="558.67" text-anchor="middle" font-size="10" font-weight="bold">20</text>
+<text x="50" y="665" font-size="10" fill="gray">
+Note: Simple grid layout for visualization. Rust unfolder will implement spiral unfolding.
+</text>
+</svg>

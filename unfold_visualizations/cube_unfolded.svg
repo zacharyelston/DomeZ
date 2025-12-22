@@ -1,0 +1,45 @@
+<svg width="773" height="700" xmlns="http://www.w3.org/2000/svg">
+<rect width="773" height="700" fill="white"/>
+<text x="386.5" y="30" text-anchor="middle" font-size="20" font-weight="bold">Unfolded Cube</text>
+<text x="386.5" y="55" text-anchor="middle" font-size="14">8 vertices, 12 faces</text>
+<g opacity="0.2">
+<line x1="126.98" y1="130" x2="126.98" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="226.98000000000002" y1="130" x2="226.98000000000002" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="326.98" y1="130" x2="326.98" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="426.98" y1="130" x2="426.98" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="526.98" y1="130" x2="526.98" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="626.98" y1="130" x2="626.98" y2="650" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="206.98000000000002" x2="723" y2="206.98000000000002" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="306.98" x2="723" y2="306.98" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="406.98" x2="723" y2="406.98" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="506.98" x2="723" y2="506.98" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="606.98" x2="723" y2="606.98" stroke="gray" stroke-width="0.5"/>
+</g>
+<polygon points="50.00,168.49 165.47,168.49 165.47,283.96" fill="#8dd3c7" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="261.70,130.00 377.17,245.47 261.70,245.47" fill="#ffffb3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="396.41,168.49 511.88,283.96 511.88,168.49" fill="#bebada" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="473.39" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="608.11,130.00 608.11,245.47 723.58,245.47" fill="#fb8072" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="646.60" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="50.00,380.19 165.47,380.19 165.47,380.19" fill="#80b1d3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="261.70,380.19 261.70,380.19 377.17,380.19" fill="#fdb462" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="550.37,380.19 434.90,380.19 434.90,380.19" fill="#b3de69" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="473.39" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="685.09,380.19 685.09,380.19 569.62,380.19" fill="#fccde5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="646.60" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<polygon points="126.98,476.41 126.98,591.88 126.98,591.88" fill="#d9d9d9" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">9</text>
+<polygon points="300.19,514.90 300.19,630.37 300.19,514.90" fill="#bc80bd" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">10</text>
+<polygon points="473.39,514.90 473.39,514.90 473.39,630.37" fill="#ccebc5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="473.39" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">11</text>
+<polygon points="646.60,476.41 646.60,591.88 646.60,591.88" fill="#ffed6f" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="646.60" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">12</text>
+<text x="50" y="680" font-size="10" fill="gray">
+Note: Simple grid layout for visualization. Rust unfolder will implement spiral unfolding.
+</text>
+</svg>

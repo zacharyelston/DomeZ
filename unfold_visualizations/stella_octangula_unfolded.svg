@@ -1,0 +1,35 @@
+<svg width="600" height="661" xmlns="http://www.w3.org/2000/svg">
+<rect width="600" height="661" fill="white"/>
+<text x="300.0" y="30" text-anchor="middle" font-size="20" font-weight="bold">Unfolded Stella Octangula</text>
+<text x="300.0" y="55" text-anchor="middle" font-size="14">8 vertices, 8 faces</text>
+<g opacity="0.2">
+<line x1="126.98" y1="130" x2="126.98" y2="611" stroke="gray" stroke-width="0.5"/>
+<line x1="226.98000000000002" y1="130" x2="226.98000000000002" y2="611" stroke="gray" stroke-width="0.5"/>
+<line x1="326.98" y1="130" x2="326.98" y2="611" stroke="gray" stroke-width="0.5"/>
+<line x1="426.98" y1="130" x2="426.98" y2="611" stroke="gray" stroke-width="0.5"/>
+<line x1="526.98" y1="130" x2="526.98" y2="611" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="206.98000000000002" x2="550" y2="206.98000000000002" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="306.98" x2="550" y2="306.98" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="406.98" x2="550" y2="406.98" stroke="gray" stroke-width="0.5"/>
+<line x1="50" y1="506.98" x2="550" y2="506.98" stroke="gray" stroke-width="0.5"/>
+</g>
+<polygon points="165.47,245.47 50.00,245.47 165.47,130.00" fill="#8dd3c7" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="338.68,283.96 338.68,168.49 223.21,168.49" fill="#ffffb3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="550.37,245.47 434.90,130.00 434.90,245.47" fill="#bebada" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="473.39" y="206.98" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="203.96,341.70 88.49,457.17 88.49,341.70" fill="#fb8072" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="261.70,341.70 261.70,457.17 377.17,341.70" fill="#80b1d3" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="396.41,341.70 511.88,341.70 511.88,457.17" fill="#fdb462" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="473.39" y="380.19" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="88.49,476.41 203.96,591.88 88.49,591.88" fill="#b3de69" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="126.98" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="223.21,591.88 338.68,591.88 338.68,476.41" fill="#fccde5" stroke="black" stroke-width="2" opacity="0.7"/>
+<text x="300.19" y="553.39" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<text x="50" y="641" font-size="10" fill="gray">
+Note: Simple grid layout for visualization. Rust unfolder will implement spiral unfolding.
+</text>
+</svg>

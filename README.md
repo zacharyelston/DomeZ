@@ -1,17 +1,18 @@
-# Geodesic Dome Generator
+# Geodesic Dome & Polyhedra Generator
 
-Generate geodesic dome primitives locally for 3D modeling, CAD, and architectural visualization.
+Generate geodesic domes and all Platonic solids locally for 3D modeling, CAD, and architectural visualization.
 
 Pure Python implementation with no external dependencies - generate .obj files ready for Blender, Unity, or any 3D software.
 
 ## Features
 
 - 🎯 **Pure Python** - No web scraping, no browser automation, no external APIs
-- 🚀 **Fast** - Generate domes in milliseconds
+- 🚀 **Fast** - Generate geometry in milliseconds
 - 🔧 **Customizable** - Control frequency, radius, base polyhedron, and partial cuts
 - 📦 **Clean Output** - Standard Wavefront .obj format
-- 🏗️ **Multiple Base Shapes** - Icosahedron (20 faces) or Octahedron (8 faces)
+- 🏗️ **Multiple Base Shapes** - All 5 Platonic solids (tetrahedron, cube, octahedron, dodecahedron, icosahedron)
 - ✂️ **Partial Domes** - Hemisphere, 3/4 sphere, or any custom fraction
+- 🎲 **Subdivision** - Generate geodesic variants of any polyhedron
 
 ## Quick Start
 
@@ -20,10 +21,13 @@ Pure Python implementation with no external dependencies - generate .obj files r
 git clone https://github.com/yourusername/geodesic-dome-generator.git
 cd geodesic-dome-generator
 
-# Generate example domes
-python3 dome_generator.py
+# Generate geodesic domes
+python3 dome_generator.py --presets
 
-# Output: dome_output/*.obj files ready to import
+# Generate Platonic solids
+python3 polyhedra_generator.py --type all
+
+# Output: dome_output/*.obj and polyhedra_output/*.obj files ready to import
 ```
 
 ## Installation

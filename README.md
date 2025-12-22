@@ -1,18 +1,31 @@
-# Geodesic Dome & Polyhedra Generator
+# PolyForge
 
-Generate geodesic domes and all Platonic solids locally for 3D modeling, CAD, and architectural visualization.
+**A comprehensive toolkit for polyhedra generation, unfolding, and manufacturing**
 
-Pure Python implementation with no external dependencies - generate .obj files ready for Blender, Unity, or any 3D software.
+Generate geodesic domes, Platonic solids, and complex polyhedra with manufacturing-ready 2D nets. From 3D geometry to flat patterns for laser cutting, CNC, and fabrication.
+
+Pure Python implementation with validated unfolding algorithms - generate .obj files and SVG spec sheets ready for Blender, CAD software, or direct manufacturing.
 
 ## Features
 
-- 🎯 **Pure Python** - No web scraping, no browser automation, no external APIs
+### Generation
+- 🎯 **Pure Python** - No external dependencies, no web scraping
 - 🚀 **Fast** - Generate geometry in milliseconds
-- 🔧 **Customizable** - Control frequency, radius, base polyhedron, and partial cuts
-- 📦 **Clean Output** - Standard Wavefront .obj format
-- 🏗️ **Multiple Base Shapes** - All 5 Platonic solids (tetrahedron, cube, octahedron, dodecahedron, icosahedron)
-- ✂️ **Partial Domes** - Hemisphere, 3/4 sphere, or any custom fraction
-- 🎲 **Subdivision** - Generate geodesic variants of any polyhedron
+- 🏗️ **Multiple Base Shapes** - All 5 Platonic solids + stella octangula
+- 🎲 **Geodesic Subdivision** - Any frequency (1V, 2V, 3V, etc.)
+- ✂️ **Partial Cuts** - Hemisphere, 3/4 sphere, or custom fractions
+
+### Unfolding & Manufacturing
+- � **Steepest Edge Unfolding** - Validated algorithm with 100% success for convex polyhedra
+- ✅ **Edge-Sharing Verification** - Faces share complete edges, not just vertices
+- 📊 **Spec Sheets** - 3D view + 2D unfolded layout with statistics
+- 🏭 **Manufacturing-Ready** - SVG output for laser cutting, CNC
+- 🧪 **Comprehensive Tests** - Automated validation suite prevents regressions
+
+### Research & Documentation
+- 📚 **Unfolding Primer** - Synthesis of 15+ research papers (1997-2025)
+- 🔬 **Algorithm Comparison** - Performance metrics and selection guide
+- � **Implementation Details** - Complete mathematical foundations
 
 ## Quick Start
 

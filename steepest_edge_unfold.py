@@ -221,58 +221,28 @@ def steepest_edge_unfold(vertices, faces):
         child_edge_p1 = child_2d[idx1_child]
         child_edge_p2 = child_2d[idx2_child]
         
-        # Transform child to align with parent - BOTH vertices must match
-        # This ensures faces share the complete edge, not just touch at a vertex
+        # Transform child to align with parent
+        # 1. Translate so v1 is at origin
+        child_2d_translated = child_2d - child_edge_p1
         
-        # Step 1: Translate child so first vertex aligns
-        translation = edge_2d_p1 - child_edge_p1
-        child_2d_translated = child_2d + translation
-        
-        # Step 2: Rotate around first vertex to align second vertex
-        # After translation, child_edge_p1 is at edge_2d_p1
-        child_vec = child_2d_translated[idx2_child] - edge_2d_p1
+        # 2. Calculate rotation to align edges
+        child_vec = child_edge_p2 - child_edge_p1
         parent_vec = edge_2d_p2 - edge_2d_p1
         
         angle_child = np.arctan2(child_vec[1], child_vec[0])
         angle_parent = np.arctan2(parent_vec[1], parent_vec[0])
-        rotation_angle = angle_parent - angle_child
         
-        # Rotate around edge_2d_p1
-        child_2d_centered = child_2d_translated - edge_2d_p1
+        # Rotate and flip (dihedral angle = 180° means flip across edge)
+        rotation_angle = angle_parent - angle_child + np.pi
+        
         cos_a = np.cos(rotation_angle)
         sin_a = np.sin(rotation_angle)
         rotation_matrix = np.array([[cos_a, -sin_a], [sin_a, cos_a]])
-        child_2d_rotated = child_2d_centered @ rotation_matrix.T + edge_2d_p1
         
-        # Step 3: Flip across the shared edge (reflection for dihedral = 180°)
-        # Reflect each vertex across the line defined by edge_2d_p1 -> edge_2d_p2
-        edge_vec = edge_2d_p2 - edge_2d_p1
-        edge_len = np.linalg.norm(edge_vec)
-        if edge_len < 1e-10:
-            continue
-        edge_unit = edge_vec / edge_len
+        child_2d_rotated = child_2d_translated @ rotation_matrix.T
         
-        child_2d_final = []
-        for vertex in child_2d_rotated:
-            # Vector from p1 to vertex
-            v = vertex - edge_2d_p1
-            # Project onto edge
-            proj_len = np.dot(v, edge_unit)
-            proj = proj_len * edge_unit
-            # Perpendicular component
-            perp = v - proj
-            # Reflect across edge
-            reflected = edge_2d_p1 + proj - perp
-            child_2d_final.append(reflected)
-        
-        child_2d_final = np.array(child_2d_final)
-        
-        # Verify edge alignment (both vertices should match exactly)
-        v1_error = np.linalg.norm(child_2d_final[idx1_child] - edge_2d_p1)
-        v2_error = np.linalg.norm(child_2d_final[idx2_child] - edge_2d_p2)
-        if v1_error > 1e-6 or v2_error > 1e-6:
-            print(f"    WARNING: Edge alignment error - v1: {v1_error:.2e}, v2: {v2_error:.2e}")
-            continue
+        # 3. Translate to final position
+        child_2d_final = child_2d_rotated + edge_2d_p1
         
         face_2d_positions[child_face] = child_2d_final
         placed.add(child_face)

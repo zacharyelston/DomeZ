@@ -223,6 +223,12 @@ def create_spec_sheet(obj_file, output_file):
     # Sort by depth (back to front)
     face_depths.sort()
     
+    # Check if this is a tetrahedron or similar simple shape
+    is_simple_shape = len(faces) <= 8
+    
+    # Color palette for different faces
+    face_colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7', '#a29bfe', '#fd79a8', '#fdcb6e']
+    
     for depth, i, face in face_depths:
         if depth < 0:  # Back-face culling
             continue
@@ -234,12 +240,16 @@ def create_spec_sheet(obj_file, output_file):
         
         points_str = " ".join(points)
         
-        # Shading based on depth
-        brightness = int(150 + depth * 100)
-        brightness = max(100, min(250, brightness))
-        color = f"rgb({brightness},{brightness},{brightness})"
-        
-        svg.append(f'<polygon points="{points_str}" fill="{color}" stroke="#333" stroke-width="1.5"/>')
+        if is_simple_shape:
+            # For simple shapes: use transparency and colored edges
+            base_color = face_colors[i % len(face_colors)]
+            svg.append(f'<polygon points="{points_str}" fill="{base_color}" stroke="#333" stroke-width="2" opacity="0.6"/>')
+        else:
+            # For complex shapes: use depth-based shading
+            brightness = int(150 + depth * 100)
+            brightness = max(100, min(250, brightness))
+            color = f"rgb({brightness},{brightness},{brightness})"
+            svg.append(f'<polygon points="{points_str}" fill="{color}" stroke="#333" stroke-width="1.5"/>')
     
     # === STATISTICS BOX ===
     svg.extend([

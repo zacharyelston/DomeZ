@@ -4,10 +4,10 @@
 <text x="40" y="90" font-size="14" font-weight="bold">3D View</text>
 <text x="430" y="90" font-size="14" font-weight="bold">Unfolded Layout</text>
 <rect x="40" y="100" width="350" height="350" fill="white" stroke="#ccc" stroke-width="2"/>
-<polygon points="325.72,275.00 247.76,397.50 285.26,217.88" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
-<polygon points="325.72,275.00 285.26,217.88 182.24,152.50" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
-<polygon points="104.28,275.00 285.26,217.88 247.76,397.50" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
-<polygon points="104.28,275.00 182.24,152.50 285.26,217.88" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="331.50,296.60 228.24,397.50 286.35,217.00" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="331.50,296.60 286.35,217.00 201.76,152.50" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="98.50,253.40 286.35,217.00 228.24,397.50" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
+<polygon points="98.50,253.40 201.76,152.50 286.35,217.00" fill="rgb(207,207,207)" stroke="#333" stroke-width="1.5"/>
 <rect x="40" y="470" width="350" height="200" fill="white" stroke="#333" stroke-width="2" rx="5"/>
 <text x="50" y="495" font-size="14" font-weight="bold">Statistics</text>
 <text x="60" y="525" font-size="12" font-family="monospace">
@@ -23,22 +23,22 @@
 <tspan x="60" dy="18">S/V Ratio: 5.1962 m⁻¹</tspan>
 </text>
 <rect x="430" y="100" width="730" height="760" fill="white" stroke="#ccc" stroke-width="2"/>
-<polygon points="675.67,217.48 532.48,360.67 532.48,217.48" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="580.21" y="265.21" text-anchor="middle" font-size="10" font-weight="bold">1</text>
-<polygon points="890.46,312.94 747.27,312.94 747.27,169.75" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="265.21" text-anchor="middle" font-size="10" font-weight="bold">2</text>
-<polygon points="1105.25,312.94 962.06,169.75 962.06,312.94" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1009.79" y="265.21" text-anchor="middle" font-size="10" font-weight="bold">3</text>
-<polygon points="675.67,432.27 532.48,432.27 532.48,575.46" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="580.21" y="480.00" text-anchor="middle" font-size="10" font-weight="bold">4</text>
-<polygon points="699.54,432.27 842.73,432.27 842.73,575.46" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="480.00" text-anchor="middle" font-size="10" font-weight="bold">5</text>
-<polygon points="914.33,527.73 1057.52,384.54 1057.52,527.73" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="1009.79" y="480.00" text-anchor="middle" font-size="10" font-weight="bold">6</text>
-<polygon points="484.75,742.52 627.94,742.52 627.94,599.33" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="580.21" y="694.79" text-anchor="middle" font-size="10" font-weight="bold">7</text>
-<polygon points="699.54,647.06 842.73,790.25 842.73,647.06" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
-<text x="795.00" y="694.79" text-anchor="middle" font-size="10" font-weight="bold">8</text>
+<polygon points="484.75,174.82 560.42,174.82 522.59,240.35" fill="#8dd3c7" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="522.59" y="196.66" text-anchor="middle" font-size="10" font-weight="bold">1</text>
+<polygon points="757.16,174.82 832.84,174.82 795.00,240.35" fill="#ffffb3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="795.00" y="196.66" text-anchor="middle" font-size="10" font-weight="bold">2</text>
+<polygon points="1029.58,174.82 1105.25,174.82 1067.41,240.35" fill="#bebada" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1067.41" y="196.66" text-anchor="middle" font-size="10" font-weight="bold">3</text>
+<polygon points="484.75,447.23 560.42,447.23 522.59,512.77" fill="#fb8072" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="522.59" y="469.08" text-anchor="middle" font-size="10" font-weight="bold">4</text>
+<polygon points="757.16,447.23 832.84,447.23 795.00,512.77" fill="#80b1d3" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="795.00" y="469.08" text-anchor="middle" font-size="10" font-weight="bold">5</text>
+<polygon points="1029.58,447.23 1105.25,447.23 1067.41,512.77" fill="#fdb462" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="1067.41" y="469.08" text-anchor="middle" font-size="10" font-weight="bold">6</text>
+<polygon points="484.75,719.65 560.42,719.65 522.59,785.18" fill="#b3de69" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="522.59" y="741.49" text-anchor="middle" font-size="10" font-weight="bold">7</text>
+<polygon points="757.16,719.65 832.84,719.65 795.00,785.18" fill="#fccde5" stroke="#333" stroke-width="2" opacity="0.8"/>
+<text x="795.00" y="741.49" text-anchor="middle" font-size="10" font-weight="bold">8</text>
 <text x="600.0" y="885" text-anchor="middle" font-size="10" fill="#666">
 Generated by Geodesic Dome Generator | Unfolding algorithm: Grid layout (Rust spiral unfolder in development)
 </text>

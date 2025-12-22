@@ -86,11 +86,12 @@ def calculate_stats(vertices, faces):
     }
 
 
-def project_3d_to_2d(vertices, rotation_x=30, rotation_y=45):
+def project_3d_to_2d(vertices, rotation_x=30, rotation_y=45, rotation_z=0):
     """Project 3D vertices to 2D with rotation (isometric-like view)"""
     # Convert angles to radians
     rx = np.radians(rotation_x)
     ry = np.radians(rotation_y)
+    rz = np.radians(rotation_z)
     
     # Rotation matrices
     Rx = np.array([
@@ -105,8 +106,14 @@ def project_3d_to_2d(vertices, rotation_x=30, rotation_y=45):
         [-np.sin(ry), 0, np.cos(ry)]
     ])
     
-    # Apply rotations
-    rotated = vertices @ Rx.T @ Ry.T
+    Rz = np.array([
+        [np.cos(rz), -np.sin(rz), 0],
+        [np.sin(rz), np.cos(rz), 0],
+        [0, 0, 1]
+    ])
+    
+    # Apply rotations (Z, then X, then Y for better viewing angle)
+    rotated = vertices @ Rz.T @ Rx.T @ Ry.T
     
     # Orthographic projection (drop z)
     projected = rotated[:, :2]
@@ -132,11 +139,23 @@ def calculate_face_depth(vertices, face, view_direction=np.array([0, 0, 1])):
 
 
 def unfold_simple(vertices, faces):
-    """Simple grid layout for unfolded view"""
+    """Simple grid layout for unfolded view with proper 3D->2D projection"""
     unfolded_faces = []
     
-    first_face = vertices[faces[0]]
-    face_size = np.max(np.ptp(first_face, axis=0))
+    # Calculate average face size from 3D geometry
+    face_sizes = []
+    for face in faces[:min(10, len(faces))]:  # Sample first 10 faces
+        face_verts = vertices[face]
+        if len(face_verts) >= 3:
+            # Calculate perimeter as size metric
+            perimeter = 0
+            for i in range(len(face_verts)):
+                v1 = face_verts[i]
+                v2 = face_verts[(i + 1) % len(face_verts)]
+                perimeter += np.linalg.norm(v2 - v1)
+            face_sizes.append(perimeter)
+    
+    avg_size = np.mean(face_sizes) if face_sizes else 1.0
     
     cols = int(np.ceil(np.sqrt(len(faces))))
     
@@ -145,11 +164,40 @@ def unfold_simple(vertices, faces):
         col = i % cols
         
         face_verts = vertices[face]
-        face_2d = face_verts[:, :2]
         
+        # Project face to its local 2D plane
+        if len(face_verts) >= 3:
+            # Calculate face normal
+            v1, v2, v3 = face_verts[0], face_verts[1], face_verts[2]
+            edge1 = v2 - v1
+            edge2 = v3 - v1
+            normal = np.cross(edge1, edge2)
+            normal = normal / (np.linalg.norm(normal) + 1e-10)
+            
+            # Create local coordinate system
+            u = edge1 / (np.linalg.norm(edge1) + 1e-10)
+            v = np.cross(normal, u)
+            v = v / (np.linalg.norm(v) + 1e-10)
+            
+            # Project vertices to 2D
+            face_2d = []
+            for vert in face_verts:
+                relative = vert - v1
+                x = np.dot(relative, u)
+                y = np.dot(relative, v)
+                face_2d.append([x, y])
+            
+            face_2d = np.array(face_2d)
+        else:
+            # Fallback for degenerate faces
+            face_2d = face_verts[:, :2]
+        
+        # Center the face
         center = np.mean(face_2d, axis=0)
         face_2d = face_2d - center
-        offset = np.array([col * face_size * 1.5, row * face_size * 1.5])
+        
+        # Position in grid
+        offset = np.array([col * avg_size * 1.2, row * avg_size * 1.2])
         face_2d = face_2d + offset
         
         unfolded_faces.append(face_2d)
@@ -206,8 +254,14 @@ def create_spec_sheet(obj_file, output_file):
     # === 3D VIEW ===
     svg.append(f'<rect x="{view_3d_x}" y="{view_3d_y}" width="{view_3d_size}" height="{view_3d_size}" fill="white" stroke="#ccc" stroke-width="2"/>')
     
-    # Project 3D view
-    projected_3d = project_3d_to_2d(vertices, rotation_x=25, rotation_y=35)
+    # Project 3D view with better angles for each polyhedron type
+    polyhedron_name_lower = Path(obj_file).stem.lower()
+    if 'dodecahedron' in polyhedron_name_lower:
+        projected_3d = project_3d_to_2d(vertices, rotation_x=20, rotation_y=30, rotation_z=15)
+    elif 'stella' in polyhedron_name_lower:
+        projected_3d = project_3d_to_2d(vertices, rotation_x=35, rotation_y=45, rotation_z=0)
+    else:
+        projected_3d = project_3d_to_2d(vertices, rotation_x=25, rotation_y=35, rotation_z=10)
     
     # Scale and center 3D view
     min_3d = projected_3d.min(axis=0)

@@ -58,42 +58,31 @@ class MeshAnalyzer:
             return normal / norm
         return np.array([0, 0, 0])
     
-    def _are_coplanar(self, normal1, normal2, threshold=0.01):
-        """Check if two normals are parallel (coplanar faces)"""
-        dot = np.dot(normal1, normal2)
-        return abs(abs(dot) - 1.0) < threshold
-    
-    def _share_edge(self, face1, face2):
-        """Check if two faces share an edge"""
-        shared = set(face1) & set(face2)
-        return len(shared) >= 2
+    def _are_coplanar(self, normal1, normal2, max_angle_degrees=0.1):
+        """
+        Check if two normals are parallel (coplanar faces). The tolerance
+        only absorbs rounding in the OBJ coordinates: neighbouring faces of
+        even a finely subdivided geodesic sphere are a degree or more apart,
+        and must not be merged.
+        """
+        dot = np.clip(abs(np.dot(normal1, normal2)), 0.0, 1.0)
+        return np.degrees(np.arccos(dot)) < max_angle_degrees
     
     def _find_coplanar_pairs(self):
         """Find pairs of triangular faces that are coplanar and share an edge"""
         coplanar_pairs = []
         
-        # Only check triangular faces
-        triangular_faces = [(i, f) for i, f in enumerate(self.faces) if len(f) == 3]
-        
-        if len(triangular_faces) < 2:
-            return coplanar_pairs
-        
-        # Calculate normals
+        # Calculate normals of the triangular faces
         normals = {}
-        for i, face in triangular_faces:
-            normals[i] = self._calculate_face_normal(face)
+        for i, face in enumerate(self.faces):
+            if len(face) == 3:
+                normals[i] = self._calculate_face_normal(face)
         
-        # Find coplanar pairs
-        checked = set()
-        for i, face1 in triangular_faces:
-            for j, face2 in triangular_faces:
-                if i >= j or (i, j) in checked:
-                    continue
-                
-                checked.add((i, j))
-                
-                if self._are_coplanar(normals[i], normals[j]) and \
-                   self._share_edge(face1, face2):
+        # Only faces that share an edge can be merged
+        adjacency = build_adjacency(self.vertices, self.faces)
+        for i in sorted(normals):
+            for j, _ in sorted(adjacency[i]):
+                if i < j and j in normals and self._are_coplanar(normals[i], normals[j]):
                     coplanar_pairs.append((i, j))
         
         return coplanar_pairs
@@ -203,6 +192,7 @@ def smart_unfold(obj_file, verbose=True):
         if verbose:
             print(f"\nApplying preprocessing: Merging coplanar triangles...")
         processed_faces = merge_coplanar_triangles(vertices, faces, analysis['coplanar_pairs'])
+    analysis['unfolded_face_count'] = len(processed_faces)
     
     # Unfold
     if verbose:
@@ -228,6 +218,15 @@ def smart_unfold(obj_file, verbose=True):
     return unfolded, analysis
 
 
+def is_strictly_convex(points):
+    """True if a planar polygon turns the same way, by a non-zero angle, at every corner"""
+    n = len(points)
+    turns = [np.cross(points[(k + 1) % n] - points[k], points[(k + 2) % n] - points[(k + 1) % n])
+             for k in range(n)]
+    return all(turn @ turns[0] > 1e-9 * np.linalg.norm(turn) * np.linalg.norm(turns[0])
+               for turn in turns)
+
+
 def merge_coplanar_triangles(vertices, faces, coplanar_pairs):
     """
     Merge coplanar triangle pairs into quads
@@ -248,23 +247,32 @@ def merge_coplanar_triangles(vertices, faces, coplanar_pairs):
         all_verts = face_i | face_j
         
         if len(shared) == 2 and len(all_verts) == 4:
-            # Valid quad - order vertices properly
-            shared_list = list(shared)
-            unique_i = list(face_i - shared)[0]
-            unique_j = list(face_j - shared)[0]
+            unique_i = (face_i - shared).pop()
+            unique_j = (face_j - shared).pop()
             
-            # Build quad in order: unique_i -> shared[0] -> unique_j -> shared[1]
-            quad = [unique_i, shared_list[0], unique_j, shared_list[1]]
+            # Walk face i from its unshared vertex, detouring through face j's
+            # unshared vertex instead of along the shared edge; this keeps
+            # face i's winding
+            order_i = list(faces[i])
+            k = order_i.index(unique_i)
+            quad = [unique_i, order_i[(k + 1) % 3], unique_j, order_i[(k + 2) % 3]]
+            
+            # A non-convex quad would not unfold or cut cleanly
+            if not is_strictly_convex(vertices[quad]):
+                continue
+            
             new_faces.append(quad)
             merged.add(i)
             merged.add(j)
+    
+    num_quads = len(new_faces)
     
     # Add remaining triangles
     for i, face in enumerate(faces):
         if i not in merged:
             new_faces.append(list(face))
     
-    print(f"  Merged {len(merged)} triangles into {len(coplanar_pairs)} quads")
+    print(f"  Merged {len(merged)} triangles into {num_quads} quads")
     print(f"  New face count: {len(new_faces)} ({len([f for f in new_faces if len(f)==3])} triangles, {len([f for f in new_faces if len(f)==4])} quads)")
     
     return new_faces
@@ -287,7 +295,7 @@ def main():
             unfolded, analysis = smart_unfold(obj_file, verbose=True)
             results[obj_file.stem] = {
                 'placed': len(unfolded),
-                'total': analysis['face_count'],
+                'total': analysis['unfolded_face_count'],
                 'topology': analysis['topology_type'],
                 'strategy': analysis['recommended_strategy']['name']
             }

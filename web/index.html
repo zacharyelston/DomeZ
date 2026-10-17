@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PolyForge Dome Viewer</title>
+<title>DomeZ Viewer</title>
 <meta name="description" content="Interactive geodesic dome, ellipsoid and egg generator with OBJ and cut-list export.">
 <style>
   :root {
@@ -178,7 +178,7 @@
 <body>
 <div class="app">
   <aside class="panel" id="panel">
-    <div class="brand"><h1>PolyForge Dome Viewer</h1><span>geodesic · ellipsoid · egg</span></div>
+    <div class="brand"><h1>DomeZ</h1><span>geodesic · ellipsoid · egg</span></div>
 
     <section>
       <h2>Shape</h2>
@@ -315,7 +315,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
    Geometry (pure functions on a unit sphere until the shape transform)
 
    Two pipelines produce the same kind of mesh:
-   - "flat": dome_generator.py's flat-grid subdivision and cut rule (z-up),
+   - "flat": the flat-grid subdivision and cut rule of domez/dome.py (z-up),
      so its meshes match the Python tools face for face.
    - Chords, Arcs, Mexican, Kruschke: ported from the Acidome calculator
      (acidome.ru/lab/calc, by popitch), including its base solids,
@@ -340,9 +340,9 @@ const SYMMETRY_OPTIONS = [
   { v: 'triad', label: 'Triad · face up' },
 ];
 
-/* ---------- Python pipeline (dome_generator.py), z-up ---------- */
+/* ---------- Python flat-grid pipeline (domez/dome.py), z-up ---------- */
 
-// Same vertex and face lists as dome_generator.py.
+// Same vertex and face lists as domez/dome.py.
 const PY_ICOSA = {
   verts: [[-1, PHI, 0], [1, PHI, 0], [-1, -PHI, 0], [1, -PHI, 0], [0, -1, PHI], [0, 1, PHI],
           [0, -1, -PHI], [0, 1, -PHI], [PHI, 0, -1], [PHI, 0, 1], [-PHI, 0, -1], [-PHI, 0, 1]],
@@ -656,8 +656,8 @@ const METHODS = {
     build: acKruschke,
   },
   flat: {
-    label: 'Flat grid (dome_generator.py)', acidome: 'Chords',
-    hint: 'Equal divisions of the flat base triangle pushed out to the sphere, with the Python cut rule. Matches dome_generator.py exactly in its native orientation (Cross for icosahedron, Pentad for octahedron).',
+    label: 'Flat grid (DomeZ classic)', acidome: 'Chords',
+    hint: 'Equal divisions of the flat base triangle pushed out to the sphere, keeping faces whose hubs are all above the cut. The original DomeZ generator; its native orientation is Cross for the icosahedron and Pentad for the octahedron.',
   },
 };
 
@@ -893,13 +893,11 @@ function syncControls() {
 function methodWarning() {
   if (state.method === 'kruschke' && effectiveMethod(state) !== 'kruschke')
     return 'So this is plain Chords here, as in Acidome.';
-  if (state.method === 'flat' && state.sym !== PY_NATIVE_SYM[state.base])
-    return `dome_generator.py only builds the ${PY_NATIVE_SYM[state.base] === 'cross' ? 'Cross' : 'Pentad'} orientation for this base.`;
   return '';
 }
 function methodHint() { return [METHODS[state.method].hint, methodWarning()].filter(Boolean).join(' '); }
 function cutHint() {
-  if (state.method === 'flat') return 'Keeps faces whose three hubs are all above the cut height (dome_generator.py\u2019s rule). The chips are the fractions that end on complete rows in Acidome.';
+  if (state.method === 'flat') return 'Keeps faces whose three hubs are all above the cut height (the flat grid\u2019s rule). The chips are the fractions that end on complete rows in Acidome.';
   if (state.sym === 'pentad') return 'Acidome\u2019s rule: keeps whole rows of faces growing down from the top hub until this fraction of all faces is reached. Like Acidome, only these row fractions are offered.';
   return 'Acidome\u2019s rule for Cross and Triad: keeps faces whose centre is above the cut height. Like Acidome, only these fractions are offered.';
 }
@@ -1250,7 +1248,7 @@ function acidomeNotes() {
   return notes;
 }
 
-/** The same dome from the Python tools (dome_generator.py / advanced_geodesics.py), leaving out their defaults. */
+/** The same dome from the Python package (python3 -m domez dome / from domez import ...), leaving out its defaults. */
 function pythonCommand() {
   const method = effectiveMethod(state);
   const defaultSym = method === 'flat' ? PY_NATIVE_SYM[state.base] : 'pentad';
@@ -1263,7 +1261,7 @@ function pythonCommand() {
     if (method !== 'flat') args.push(`-m ${method}`);
     if (state.sym !== defaultSym) args.push(`-s ${state.sym}`);
     if (flat) args.push('--flat-base');
-    return `python3 dome_generator.py ${args.join(' ')}`;
+    return `python3 -m domez dome ${args.join(' ')}`;
   }
   const kw = [`base='${state.base}'`];
   if (!full) kw.push(`partial=${part}`);
@@ -1271,10 +1269,10 @@ function pythonCommand() {
   if (state.sym !== defaultSym) kw.push(`symmetry='${state.sym}'`);
   if (flat) kw.push('flat_base=True');
   if (state.shape === 'ellipsoid') {
-    return `from advanced_geodesics import EllipsoidalGeodesic\nEllipsoidalGeodesic(${state.freq}, ${state.rx}, ${state.ry}, ${state.rz},\n    ${kw.join(', ')})\\\n    .generate().to_obj('ellipsoid.obj')`;
+    return `from domez import EllipsoidalGeodesic\nEllipsoidalGeodesic(${state.freq}, ${state.rx}, ${state.ry}, ${state.rz},\n    ${kw.join(', ')})\\\n    .generate().to_obj('ellipsoid.obj')`;
   }
   const asymmetry = state.eggTip === 'up' ? state.eggW : -state.eggW;
-  return `from advanced_geodesics import EggGeodesic\nEggGeodesic(${state.freq}, length=${state.eggL}, breadth=${state.eggB}, asymmetry=${asymmetry},\n    ${kw.join(', ')})\\\n    .generate().to_obj('egg.obj')`;
+  return `from domez import EggGeodesic\nEggGeodesic(${state.freq}, length=${state.eggL}, breadth=${state.eggB}, asymmetry=${asymmetry},\n    ${kw.join(', ')})\\\n    .generate().to_obj('egg.obj')`;
 }
 
 /* =========================================================================
@@ -1300,7 +1298,7 @@ function downloadObj() {
   const M = current;
   const toOut = state.upAxis === 'y' ? (p) => [p[0], p[2], -p[1]] : (p) => p;
   const lines = [
-    '# PolyForge Dome Viewer export',
+    '# DomeZ viewer export',
     shapeLine(),
     `# Frequency: ${state.freq}V, base: ${state.base}, method: ${METHODS[effectiveMethod(state)].label}, symmetry: ${state.sym}`,
     `# Partial: ${fracText(effectivePartial(state)) === '1/1' ? 'full' : fracText(effectivePartial(state))}${state.flat ? ', flattened base' : ''}`,
@@ -1366,7 +1364,7 @@ scheduleRebuild();
 loop();
 
 // Exposed for scripted checks against the Python generator.
-window.PolyForge = { buildModel, buildUnitGeodesic, acidomeHash, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
+window.DomeZ = { buildModel, buildUnitGeodesic, acidomeHash, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
 </script>
 </body>
 </html>

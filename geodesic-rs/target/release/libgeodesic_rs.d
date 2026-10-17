@@ -1,1 +1,0 @@
-/Users/zacelston/code/geodesic-dome-generator/geodesic-rs/target/release/libgeodesic_rs.rlib: /Users/zacelston/code/geodesic-dome-generator/geodesic-rs/src/geometry.rs /Users/zacelston/code/geodesic-dome-generator/geodesic-rs/src/lib.rs

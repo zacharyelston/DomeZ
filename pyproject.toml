@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "domez"
+version = "0.2.0"
+description = "Geodesic spheres, ellipsoids and eggs with Acidome-compatible subdivision"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+plot = ["matplotlib"]
+test = ["pytest"]
+
+[project.scripts]
+domez = "domez.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/zacharyelston/DomeZ"
+
+[tool.setuptools]
+packages = ["domez"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1250,18 +1250,31 @@ function acidomeNotes() {
   return notes;
 }
 
+/** The same dome from the Python tools (dome_generator.py / advanced_geodesics.py), leaving out their defaults. */
 function pythonCommand() {
-  const py = state.method === 'flat' && state.sym === PY_NATIVE_SYM[state.base] && !state.flat;
-  if (!py) return 'No Python equivalent: dome_generator.py only has the flat-grid method, in its native orientation, without base flattening.';
-  const f = parsePartial(state.partial).value;
+  const method = effectiveMethod(state);
+  const defaultSym = method === 'flat' ? PY_NATIVE_SYM[state.base] : 'pentad';
+  const f = parsePartial(effectivePartial(state));
+  const full = f.value >= 1;
+  const part = full ? '1' : f.q ? `${f.p}/${f.q}` : String(f.value); // "7/12" is valid Python too
+  const flat = state.flat && !full;
   if (state.shape === 'sphere') {
-    return `python3 dome_generator.py -f ${state.freq} -r ${state.r} -p ${+f.toFixed(4)} -b ${state.base}`;
+    const args = [`-f ${state.freq}`, `-r ${state.r}`, `-p ${part}`, `-b ${state.base}`];
+    if (method !== 'flat') args.push(`-m ${method}`);
+    if (state.sym !== defaultSym) args.push(`-s ${state.sym}`);
+    if (flat) args.push('--flat-base');
+    return `python3 dome_generator.py ${args.join(' ')}`;
   }
+  const kw = [`base='${state.base}'`];
+  if (!full) kw.push(`partial=${part}`);
+  if (method !== 'flat') kw.push(`method='${method}'`);
+  if (state.sym !== defaultSym) kw.push(`symmetry='${state.sym}'`);
+  if (flat) kw.push('flat_base=True');
   if (state.shape === 'ellipsoid') {
-    const cut = f < 1 ? '\n# note: EllipsoidalGeodesic has no partial cut' : '';
-    return `from advanced_geodesics import EllipsoidalGeodesic\nEllipsoidalGeodesic(${state.freq}, ${state.rx}, ${state.ry}, ${state.rz}, base='${state.base}')\\\n    .generate().to_obj('ellipsoid.obj')${cut}`;
+    return `from advanced_geodesics import EllipsoidalGeodesic\nEllipsoidalGeodesic(${state.freq}, ${state.rx}, ${state.ry}, ${state.rz},\n    ${kw.join(', ')})\\\n    .generate().to_obj('ellipsoid.obj')`;
   }
-  return 'No Python equivalent yet: the egg shape only exists in this viewer.';
+  const asymmetry = state.eggTip === 'up' ? state.eggW : -state.eggW;
+  return `from advanced_geodesics import EggGeodesic\nEggGeodesic(${state.freq}, length=${state.eggL}, breadth=${state.eggB}, asymmetry=${asymmetry},\n    ${kw.join(', ')})\\\n    .generate().to_obj('egg.obj')`;
 }
 
 /* =========================================================================

@@ -5,29 +5,52 @@ Generate ellipsoidal, tubular, and custom-shaped geodesic meshes
 Perfect for converting complex 3D models into geodesic triangle panels
 """
 
+import math
 import numpy as np
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 from dome_generator import Vector3, GeodesicDome
 
 
+def _unit_dome(shape):
+    """The unit-sphere dome a shape is mapped from: subdivided, cut, and without hubs below the cut.
+
+    shape carries frequency, base, partial, method, symmetry and flat_base (see GeodesicDome).
+    """
+    dome = GeodesicDome(frequency=shape.frequency, radius=1.0, base=shape.base,
+                        method=shape.method, symmetry=shape.symmetry, flat_base=shape.flat_base)
+    dome.generate()
+    if shape.partial < 1.0:
+        dome.cut_to_partial(shape.partial).drop_unused_vertices()
+    return dome
+
+
 class EllipsoidalGeodesic:
-    """Generate ellipsoidal geodesic meshes with independent axis scaling"""
+    """Generate ellipsoidal geodesic meshes with independent axis scaling
+
+    partial, method, symmetry and flat_base work as for GeodesicDome; the cut is made on the
+    unit sphere before scaling, as in the web viewer.
+    """
     
-    def __init__(self, frequency=3, radius_x=1.0, radius_y=1.0, radius_z=1.0, base='icosahedron'):
+    def __init__(self, frequency=3, radius_x=1.0, radius_y=1.0, radius_z=1.0, base='icosahedron',
+                 partial=1.0, method='flat', symmetry=None, flat_base=False):
         self.frequency = frequency
         self.radius_x = radius_x
         self.radius_y = radius_y
         self.radius_z = radius_z
         self.base = base
+        self.partial = partial
+        self.method = method
+        self.symmetry = symmetry
+        self.flat_base = flat_base
+        self.dome = None
         self.vertices = []
         self.faces = []
         
     def generate(self):
         """Generate ellipsoidal geodesic by scaling sphere"""
         # Start with spherical geodesic
-        dome = GeodesicDome(frequency=self.frequency, radius=1.0, base=self.base)
-        dome.generate()
+        dome = self.dome = _unit_dome(self)
         
         # Scale each vertex independently per axis
         self.vertices = []
@@ -49,6 +72,7 @@ class EllipsoidalGeodesic:
             "# Ellipsoidal Geodesic",
             f"# Frequency: {self.frequency}V",
             f"# Radii: X={self.radius_x}m, Y={self.radius_y}m, Z={self.radius_z}m",
+            *(self.dome.method_header(always=self.partial < 1) if self.dome else []),
             f"# Vertices: {len(self.vertices)}",
             f"# Faces: {len(self.faces)}",
             "",
@@ -63,6 +87,78 @@ class EllipsoidalGeodesic:
             lines.append(f"f {' '.join(map(str, face))}")
         
         Path(filename).write_text('\n'.join(lines))
+        print(f"✓ Saved: {filename}")
+        print(f"  Vertices: {len(self.vertices)}, Faces: {len(self.faces)}")
+
+
+class EggGeodesic:
+    """Generate egg-shaped geodesic meshes (a Hügelschäffer egg of revolution about Z)
+
+    The egg's profile is r(t) = (B/2) * sqrt((L² - 4t²) / (L² + 8wt + 4w²)) for -L/2 <= t <= L/2,
+    where L is the length (along Z), B the breadth and w = asymmetry * L. A unit-sphere point
+    (x, y, z) maps to (x*s, y*s, t) with t = z*L/2 and s = (B/2)*L / sqrt(L² + 8wt + 4w²).
+    Positive asymmetry puts the pointed end up (+Z), negative puts it down, 0 gives an
+    ellipsoid; |asymmetry| must stay below 0.5.
+
+    partial, method, symmetry and flat_base work as for GeodesicDome; the cut is made on the
+    unit sphere before the egg mapping, as in the web viewer.
+    """
+    
+    def __init__(self, frequency=3, length=6.0, breadth=4.4, asymmetry=0.08, base='icosahedron',
+                 partial=1.0, method='flat', symmetry=None, flat_base=False):
+        if length <= 0 or breadth <= 0:
+            raise ValueError("length and breadth must be positive")
+        if abs(asymmetry) >= 0.5:
+            raise ValueError("asymmetry must be between -0.5 and 0.5")
+        self.frequency = frequency
+        self.length = length
+        self.breadth = breadth
+        self.asymmetry = asymmetry
+        self.base = base
+        self.partial = partial
+        self.method = method
+        self.symmetry = symmetry
+        self.flat_base = flat_base
+        self.dome = None
+        self.vertices = []
+        self.faces = []
+    
+    def generate(self):
+        """Generate the egg by mapping a unit-sphere geodesic onto it"""
+        dome = self.dome = _unit_dome(self)
+        L, B = self.length, self.breadth
+        w = self.asymmetry * L
+        self.vertices = []
+        for v in dome.vertices:
+            t = v.z * L / 2
+            s = (B / 2) * L / math.sqrt(L * L + 8 * w * t + 4 * w * w)
+            self.vertices.append(Vector3(v.x * s, v.y * s, t))
+        self.faces = dome.faces
+        return self
+    
+    def to_obj(self, filename):
+        """Export to .obj file"""
+        end = 'up' if self.asymmetry > 0 else 'down' if self.asymmetry < 0 else 'none'
+        lines = [
+            "# Egg Geodesic (Hügelschäffer egg)",
+            f"# Frequency: {self.frequency}V",
+            f"# Length: {self.length}m, Breadth: {self.breadth}m, Asymmetry: {self.asymmetry} (pointed end {end})",
+            f"# Base: {self.base}",
+            *(self.dome.method_header(always=True) if self.dome else []),
+            f"# Vertices: {len(self.vertices)}",
+            f"# Faces: {len(self.faces)}",
+            "",
+        ]
+        
+        for v in self.vertices:
+            lines.append(f"v {v.x:.6f} {v.y:.6f} {v.z:.6f}")
+        
+        lines.append("")
+        
+        for face in self.faces:
+            lines.append(f"f {' '.join(map(str, face))}")
+        
+        Path(filename).write_text('\n'.join(lines), encoding='utf-8')
         print(f"✓ Saved: {filename}")
         print(f"  Vertices: {len(self.vertices)}, Faces: {len(self.faces)}")
 
@@ -360,7 +456,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Generate advanced geodesic shapes')
-    parser.add_argument('--type', choices=['ellipsoid', 'tube', 'spacecraft', 'all'], 
+    parser.add_argument('--type', choices=['ellipsoid', 'egg', 'tube', 'spacecraft', 'all'], 
                         default='all', help='Shape type to generate')
     parser.add_argument('-f', '--frequency', type=int, default=3,
                         help='Subdivision frequency (default: 3)')
@@ -397,6 +493,20 @@ def main():
         ellipsoid = EllipsoidalGeodesic(args.frequency, 2.0, 3.0, 4.0)
         ellipsoid.generate()
         ellipsoid.to_obj(output_dir / "ellipsoid_triaxial.obj")
+    
+    if args.type in ['egg', 'all']:
+        print("\nGenerating eggs...")
+        
+        # Full egg, pointed end up
+        egg = EggGeodesic(args.frequency, length=6.0, breadth=4.4, asymmetry=0.08)
+        egg.generate()
+        egg.to_obj(output_dir / "egg.obj")
+        
+        # Egg dome: Acidome Chords, 5/8 of the egg, standing on a flat base
+        egg = EggGeodesic(args.frequency, length=6.0, breadth=4.4, asymmetry=0.08,
+                          partial=5/8, method='chords', flat_base=True)
+        egg.generate()
+        egg.to_obj(output_dir / "egg_dome.obj")
     
     if args.type in ['tube', 'all']:
         print("\nGenerating tubes...")
@@ -460,6 +570,7 @@ def main():
     print(f"\nAdvanced geodesics saved to: {output_dir}/")
     print("\nGenerated shapes:")
     print("  • Ellipsoids - Oblate, prolate, and tri-axial")
+    print("  • Eggs - Hügelschäffer egg, full and as a flat-based dome")
     print("  • Tubes - Cylindrical geodesic meshes")
     print("  • Spacecraft - Fuselage with solar panels")
 

@@ -1,6 +1,12 @@
-# Output directories
+# Generated output
 dome_output/
+advanced_output/
+polyhedra_output/
+moonpies_output/
 *.obj
+
+# Rust build output
+target/
 
 # Python
 __pycache__/
@@ -39,3 +45,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Third-party offline Acidome calculator (non-standard license; keep local)
+vendor/

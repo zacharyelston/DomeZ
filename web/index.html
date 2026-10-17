@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DomeZ Viewer</title>
+<meta name="description" content="Interactive geodesic dome, ellipsoid and egg generator with OBJ and cut-list export.">
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --panel: #ffffff;
+    --ink: #1d1e20;
+    --muted: #6a6e75;
+    --faint: #9a9da3;
+    --line: #e2e2dd;
+    --field: #f3f3ef;
+    --accent: #2c64d6;
+    --accent-ink: #ffffff;
+    --stage: #e9ebee;
+    --grid: #c9ccd2;
+    --panel-face: #8fb2e8;
+    --hub: #3a3d42;
+    --warn: #a35a00;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111214;
+      --panel: #18191c;
+      --ink: #e7e7e4;
+      --muted: #9b9fa7;
+      --faint: #6d7179;
+      --line: #2a2c31;
+      --field: #222429;
+      --accent: #6d9bff;
+      --accent-ink: #0d1424;
+      --stage: #0c0d0f;
+      --grid: #2c2f35;
+      --panel-face: #4f78bd;
+      --hub: #d9dadc;
+      --warn: #f0a24a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111214;
+    --panel: #18191c;
+    --ink: #e7e7e4;
+    --muted: #9b9fa7;
+    --faint: #6d7179;
+    --line: #2a2c31;
+    --field: #222429;
+    --accent: #6d9bff;
+    --accent-ink: #0d1424;
+    --stage: #0c0d0f;
+    --grid: #2c2f35;
+    --panel-face: #4f78bd;
+    --hub: #d9dadc;
+    --warn: #f0a24a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num, output, td.n { font-variant-numeric: tabular-nums; }
+
+  .app { display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
+  .panel {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 16px 16px 40px;
+  }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; margin: 2px 0 14px; }
+  .brand h1 { font-size: 15px; font-weight: 650; margin: 0; letter-spacing: -.01em; }
+  .brand span { color: var(--muted); font-size: 12px; }
+
+  section { border-top: 1px solid var(--line); padding: 12px 0 6px; }
+  section > h2 {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 0 0 10px;
+  }
+  .row { display: grid; grid-template-columns: 92px 1fr 64px; align-items: center; gap: 8px; margin: 0 0 9px; }
+  .row > label { color: var(--muted); }
+  .row.two { grid-template-columns: 92px 1fr; }
+  .row input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row input[type=number], .row select, .row input[type=text] {
+    width: 100%; background: var(--field); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit;
+  }
+  .row input[type=number] { text-align: right; font-variant-numeric: tabular-nums; }
+  .seg { display: flex; background: var(--field); border: 1px solid var(--line); border-radius: 7px; padding: 2px; gap: 2px; }
+  .seg button {
+    flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
+    padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 10px 100px; }
+  .chips button {
+    border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px;
+    padding: 1px 8px; font: 12px/1.6 inherit; cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .chips button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--ink); cursor: pointer; }
+  .check input { accent-color: var(--accent); margin: 0; }
+  .hint { color: var(--faint); font-size: 12px; margin: -2px 0 10px; }
+  .hint.warn { color: var(--warn); }
+  [hidden] { display: none !important; }
+
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .btn {
+    border: 1px solid var(--line); background: var(--field); color: var(--ink);
+    border-radius: 7px; padding: 7px 8px; font: inherit; cursor: pointer; text-align: center; text-decoration: none;
+  }
+  .btn:hover { border-color: var(--faint); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  pre.cmd {
+    background: var(--field); border: 1px solid var(--line); border-radius: 7px; padding: 8px;
+    font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; margin: 0 0 8px;
+  }
+
+  table.struts { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.struts th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 4px; border-bottom: 1px solid var(--line); }
+  table.struts td { padding: 4px 4px; border-bottom: 1px solid var(--line); }
+  table.struts td.n, table.struts th.n { text-align: right; }
+  table.struts tr { cursor: default; }
+  table.struts tbody tr:hover, table.struts tbody tr.on { background: var(--field); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+  .tablewrap { max-height: 280px; overflow-y: auto; }
+
+  .stage { position: relative; background: var(--stage); min-width: 0; min-height: 0; }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hud {
+    position: absolute; left: 14px; top: 14px; background: color-mix(in srgb, var(--panel) 88%, transparent);
+    backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px;
+    box-shadow: var(--shadow); display: grid; grid-template-columns: auto auto; gap: 3px 16px; font-size: 12px;
+    pointer-events: none;
+  }
+  .hud .k { color: var(--muted); }
+  .hud .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hud .title { grid-column: 1 / -1; font-weight: 650; margin-bottom: 4px; font-size: 13px; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--panel); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; box-shadow: var(--shadow);
+    transform: translate(12px, 12px); white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .corner { position: absolute; right: 14px; top: 14px; display: flex; gap: 6px; }
+  .corner .btn { background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(6px); padding: 5px 9px; }
+  .err {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted);
+  }
+
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 56vh auto; height: auto; }
+    .stage { order: -1; height: 56vh; }
+    .panel { border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
+    .hud { left: 10px; top: 10px; padding: 7px 9px; font-size: 11px; gap: 1px 12px; }
+    .hud .opt { display: none; }
+    .corner { right: 10px; top: 10px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" id="panel">
+    <div class="brand"><h1>DomeZ</h1><span>geodesic · ellipsoid · egg</span></div>
+
+    <section>
+      <h2>Shape</h2>
+      <div class="row two"><label>Shape</label>
+        <div class="seg" data-key="shape">
+          <button data-v="sphere">Sphere</button><button data-v="ellipsoid">Ellipsoid</button><button data-v="egg">Egg</button>
+        </div>
+      </div>
+      <div data-show="shape=sphere">
+        <div class="row"><label for="r">Radius (m)</label><input type="range" id="r" min="0.1" max="30" step="0.05"><input type="number" data-for="r" step="0.05" min="0.01"></div>
+      </div>
+      <div data-show="shape=ellipsoid">
+        <div class="row"><label for="rx">Radius X (m)</label><input type="range" id="rx" min="0.1" max="30" step="0.05"><input type="number" data-for="rx" step="0.05" min="0.01"></div>
+        <div class="row"><label for="ry">Radius Y (m)</label><input type="range" id="ry" min="0.1" max="30" step="0.05"><input type="number" data-for="ry" step="0.05" min="0.01"></div>
+        <div class="row"><label for="rz">Radius Z (m)</label><input type="range" id="rz" min="0.1" max="30" step="0.05"><input type="number" data-for="rz" step="0.05" min="0.01"></div>
+      </div>
+      <div data-show="shape=egg">
+        <div class="row"><label for="eggL">Length (m)</label><input type="range" id="eggL" min="0.1" max="40" step="0.05"><input type="number" data-for="eggL" step="0.05" min="0.01"></div>
+        <div class="row"><label for="eggB">Breadth (m)</label><input type="range" id="eggB" min="0.1" max="40" step="0.05"><input type="number" data-for="eggB" step="0.05" min="0.01"></div>
+        <div class="row"><label for="eggW">Asymmetry</label><input type="range" id="eggW" min="0" max="0.24" step="0.005"><output data-for="eggW"></output></div>
+        <div class="row two"><label>Pointed end</label>
+          <div class="seg" data-key="eggTip"><button data-v="up">Up</button><button data-v="down">Down</button></div>
+        </div>
+        <p class="hint">Hügelschäffer egg: length runs along the vertical axis; asymmetry shifts the widest point toward the blunt end (0 gives an ellipsoid).</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Geodesic</h2>
+      <div class="row two"><label>Base</label>
+        <div class="seg" data-key="base"><button data-v="icosahedron">Icosahedron</button><button data-v="octahedron">Octahedron</button></div>
+      </div>
+      <div class="row"><label for="freq">Frequency</label><input type="range" id="freq" min="1" max="12" step="1"><output data-for="freq"></output></div>
+      <div class="row two"><label for="method">Method</label><select id="method"></select></div>
+      <div class="row two"><label for="sym">Symmetry</label><select id="sym"></select></div>
+      <p class="hint" id="methodHint"></p>
+    </section>
+
+    <section>
+      <h2>Cut</h2>
+      <div class="row"><label for="partial">Sphere part</label><input type="range" id="partial" min="0.05" max="1" step="0.001"><output data-for="partial"></output></div>
+      <div class="chips" id="partialChips"></div>
+      <p class="hint" id="cutHint"></p>
+      <label class="check"><input type="checkbox" id="flat"> Flatten base ring onto one plane</label>
+    </section>
+
+    <section>
+      <h2>Display</h2>
+      <div class="row two"><label>Panels</label>
+        <div class="seg" data-key="panels"><button data-v="off">Off</button><button data-v="glass">Glass</button><button data-v="solid">Solid</button></div>
+      </div>
+      <label class="check"><input type="checkbox" id="showStruts"> Struts</label>
+      <label class="check"><input type="checkbox" id="showHubs"> Hubs</label>
+      <label class="check"><input type="checkbox" id="colorTypes"> Colour struts by type</label>
+      <label class="check"><input type="checkbox" id="spin"> Auto-rotate</label>
+    </section>
+
+    <section>
+      <h2>Struts</h2>
+      <div class="row"><label for="tol">Group within</label><input type="range" id="tol" min="0" max="20" step="0.5"><output data-for="tol"></output></div>
+      <p class="hint" id="strutHint"></p>
+      <div class="tablewrap">
+        <table class="struts">
+          <thead><tr><th>Type</th><th class="n">Length</th><th class="n" id="cfHead">Chord</th><th class="n">Qty</th></tr></thead>
+          <tbody id="strutRows"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="hubLine" style="margin-top:8px"></p>
+    </section>
+
+    <section>
+      <h2>Build</h2>
+      <div class="row two"><label for="conn">Connector</label>
+        <select id="conn">
+          <option value="Cone_D108">Cone (D108)</option>
+          <option value="Piped_D108">Piped (D108)</option>
+          <option value="Semicone">Semicone</option>
+          <option value="Joint">Joint</option>
+          <option value="Nose">Nose</option>
+          <option value="GoodKarma">GoodKarma</option>
+        </select>
+      </div>
+      <div class="row two"><label>Beams (mm)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="beamW" min="1" step="1" style="width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit;text-align:right">
+          <span style="color:var(--muted)">×</span>
+          <input type="number" id="beamT" min="1" step="1" style="width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit;text-align:right">
+        </div>
+      </div>
+      <p class="hint">Connector and beam size are passed to Acidome; lengths here are centre-to-centre at the hub.</p>
+    </section>
+
+    <section>
+      <h2>Export</h2>
+      <div class="row two"><label for="upAxis">OBJ up axis</label>
+        <select id="upAxis"><option value="z">Z up (repo default)</option><option value="y">Y up</option></select>
+      </div>
+      <label class="check"><input type="checkbox" id="objLines"> Include struts as OBJ lines</label>
+      <div class="btns">
+        <button class="btn primary" id="dlObj">Download OBJ</button>
+        <button class="btn" id="dlCsv">Cut list CSV</button>
+        <button class="btn" id="copyLink">Copy link</button>
+        <button class="btn" id="resetBtn">Reset</button>
+      </div>
+      <h2 style="margin-top:14px">Acidome</h2>
+      <p class="hint" id="acidomeHint"></p>
+      <div class="btns">
+        <a class="btn" id="acidomeLocal" target="_blank" rel="noopener">Offline copy</a>
+        <a class="btn" id="acidomeWeb" target="_blank" rel="noopener">acidome.com</a>
+      </div>
+      <pre class="cmd" id="acidomeHash"></pre>
+      <h2 style="margin-top:14px">Python</h2>
+      <pre class="cmd" id="pyCmd"></pre>
+    </section>
+  </aside>
+
+  <main class="stage">
+    <canvas id="view"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="corner">
+      <button class="btn" id="fitBtn" title="Frame the model">Fit view</button>
+      <button class="btn" id="themeBtn" title="Toggle light / dark">Theme</button>
+    </div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="err" id="err" hidden></div>
+  </main>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =========================================================================
+   Geometry (pure functions on a unit sphere until the shape transform)
+
+   Two pipelines produce the same kind of mesh:
+   - "flat": the flat-grid subdivision and cut rule of domez/dome.py (z-up),
+     so its meshes match the Python tools face for face.
+   - Chords, Arcs, Mexican, Kruschke: ported from the Acidome calculator
+     (acidome.ru/lab/calc, by popitch), including its base solids,
+     orientations, partial cut and flat-base rules. Acidome works y-up;
+     the result is turned z-up at the end.
+   ========================================================================= */
+const PHI = (1 + Math.sqrt(5)) / 2;
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = (a) => Math.hypot(a[0], a[1], a[2]);
+const norm = (a) => { const l = len(a); return l > 0 ? [a[0] / l, a[1] / l, a[2] / l] : a; };
+const rotX = (p, t) => [p[0], p[1] * Math.cos(t) - p[2] * Math.sin(t), p[1] * Math.sin(t) + p[2] * Math.cos(t)];
+const rotY = (p, t) => [p[0] * Math.cos(t) + p[2] * Math.sin(t), p[1], -p[0] * Math.sin(t) + p[2] * Math.cos(t)];
+const rotZ = (p, t) => [p[0] * Math.cos(t) - p[1] * Math.sin(t), p[0] * Math.sin(t) + p[1] * Math.cos(t), p[2]];
+
+const SYMMETRY_OPTIONS = [
+  { v: 'pentad', label: 'Pentad · vertex up' },
+  { v: 'cross', label: 'Cross · edge up' },
+  { v: 'triad', label: 'Triad · face up' },
+];
+
+/* ---------- Python flat-grid pipeline (domez/dome.py), z-up ---------- */
+
+// Same vertex and face lists as domez/dome.py.
+const PY_ICOSA = {
+  verts: [[-1, PHI, 0], [1, PHI, 0], [-1, -PHI, 0], [1, -PHI, 0], [0, -1, PHI], [0, 1, PHI],
+          [0, -1, -PHI], [0, 1, -PHI], [PHI, 0, -1], [PHI, 0, 1], [-PHI, 0, -1], [-PHI, 0, 1]],
+  faces: [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+          [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]],
+};
+const PY_OCTA = {
+  verts: [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]],
+  faces: [[0, 2, 4], [0, 4, 3], [0, 3, 5], [0, 5, 2], [1, 4, 2], [1, 3, 4], [1, 5, 3], [1, 2, 5]],
+};
+// The Python icosahedron has an edge up (Cross); its octahedron has a vertex up (Pentad).
+const PY_ORIENT = {
+  icosahedron: { pentad: (p) => rotX(p, Math.atan2(1, PHI)), cross: (p) => p, triad: (p) => rotY(p, -Math.atan2(PHI, 2 * PHI + 1)) },
+  octahedron: { pentad: (p) => p, cross: (p) => rotX(p, Math.PI / 4), triad: (p) => rotY(rotZ(p, -Math.PI / 4), -Math.atan2(Math.SQRT2, 1)) },
+};
+const PY_NATIVE_SYM = { icosahedron: 'cross', octahedron: 'pentad' };
+
+function pythonGeodesic(base, sym, f) {
+  const src = base === 'octahedron' ? PY_OCTA : PY_ICOSA;
+  const o = PY_ORIENT[base][sym] || ((p) => p);
+  const verts = src.verts.map((v) => o(norm(v)));
+  const keyIndex = new Map();
+  const pts = [];
+  const tris = [];
+  const idx = (q) => {
+    const k = Math.round(q[0] * 1e6) + ',' + Math.round(q[1] * 1e6) + ',' + Math.round(q[2] * 1e6);
+    let i = keyIndex.get(k);
+    if (i === undefined) { i = pts.length; keyIndex.set(k, i); pts.push(q); }
+    return i;
+  };
+  for (const [a, b, c] of src.faces) {
+    const A = verts[a], B = verts[b], C = verts[c];
+    const g = [];
+    for (let i = 0; i <= f; i++) {
+      g[i] = [];
+      for (let j = 0; j <= f - i; j++) g[i][j] = norm(add(add(mul(A, (f - i - j) / f), mul(B, i / f)), mul(C, j / f)));
+    }
+    for (let i = 0; i < f; i++) {
+      for (let j = 0; j < f - i; j++) {
+        tris.push([idx(g[i][j]), idx(g[i + 1][j]), idx(g[i][j + 1])]);
+        if (j < f - i - 1) tris.push([idx(g[i + 1][j]), idx(g[i + 1][j + 1]), idx(g[i][j + 1])]);
+      }
+    }
+  }
+  return { pts, tris };
+}
+
+/** GeodesicDome.cut_to_partial: keep faces whose vertices are all at or above z = 1 - 2f. */
+function pythonCut(mesh, frac) {
+  if (frac >= 1) return mesh.tris.map(() => true);
+  const h = 1 - 2 * frac;
+  return mesh.tris.map((t) => t.every((i) => mesh.pts[i][2] >= h - 1e-9));
+}
+
+/* ---------- Acidome pipeline, y-up ---------- */
+
+const AC_A = 4 / Math.sqrt(2 * (5 + Math.sqrt(5))) / 2;
+const AC_B = Math.sqrt(1 - AC_A * AC_A);
+const AC_ICOSA = {
+  verts: [[-AC_A, 0, AC_B], [AC_A, 0, AC_B], [-AC_A, 0, -AC_B], [AC_A, 0, -AC_B], [0, AC_B, AC_A], [0, AC_B, -AC_A],
+          [0, -AC_B, AC_A], [0, -AC_B, -AC_A], [AC_B, AC_A, 0], [-AC_B, AC_A, 0], [AC_B, -AC_A, 0], [-AC_B, -AC_A, 0]],
+  faces: [[0, 4, 1], [0, 9, 4], [9, 5, 4], [4, 5, 8], [4, 8, 1], [8, 10, 1], [8, 3, 10], [5, 3, 8], [5, 2, 3], [2, 7, 3],
+          [7, 10, 3], [7, 6, 10], [7, 11, 6], [11, 0, 6], [0, 1, 6], [6, 1, 10], [9, 0, 11], [9, 11, 2], [9, 2, 5], [7, 2, 11]],
+};
+const AC_OCTA = {
+  verts: [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]],
+  faces: [[3, 5, 0], [4, 3, 0], [2, 4, 0], [5, 2, 0], [5, 3, 1], [3, 4, 1], [4, 2, 1], [2, 5, 1]],
+};
+// Acidome's Vector.rotate (note its sign convention).
+function acRotate(p, t, axis) {
+  const c = Math.cos(t), s = Math.sin(t);
+  if (axis === 'x') return [p[0], p[1] * c + p[2] * s, p[2] * c - p[1] * s];
+  if (axis === 'y') return [p[0] * c + p[2] * s, p[1], p[2] * c - p[0] * s];
+  return [p[0] * c + p[1] * s, p[1] * c - p[0] * s, p[2]];
+}
+function acidomeBase(base, sym) {
+  const src = base === 'octahedron' ? AC_OCTA : AC_ICOSA;
+  let v = src.verts.map((p) => p.slice());
+  if (base === 'octahedron') {
+    if (sym === 'cross') v = v.map((p) => acRotate(p, Math.PI / 4, 'x'));
+    if (sym === 'triad') { const beta = Math.acos(1 / Math.sqrt(3)); v = v.map((p) => acRotate(acRotate(p, Math.PI / 4, 'y'), -beta, 'x')); }
+  } else {
+    if (sym === 'pentad') v = v.map((p) => acRotate(p, Math.atan(AC_A / AC_B), 'x'));
+    if (sym === 'triad') v = v.map((p) => acRotate(p, Math.asin(2 / (Math.sqrt(3) + Math.sqrt(15))), 'z'));
+  }
+  return { verts: v, faces: src.faces };
+}
+
+/** Acidome splitFaces: rows grow from each face's lowest-numbered corner; points are normalised chord midpoints. */
+function acChords(base, N) {
+  const pts = base.verts.map((p) => p.slice());
+  const cache = new Map();
+  const mid = (key, ai, bi, q) => {
+    let v = cache.get(key);
+    if (v !== undefined) return v;
+    if (q === 0) v = ai;
+    else if (q === 1) v = bi;
+    else { pts.push(norm(add(mul(pts[ai], 1 - q), mul(pts[bi], q)))); v = pts.length - 1; }
+    cache.set(key, v);
+    return v;
+  };
+  const tris = [];
+  for (const face of base.faces) {
+    const f = face.slice();
+    const mini = Math.min(...f);
+    while (f[0] !== mini) f.push(f.shift());
+    const [A, B, C] = f;
+    let up = [A];
+    for (let n = 1; n <= N; n++) {
+      const li = mid(`${A}-${B}-${n}`, A, B, n / N);
+      const ri = mid(`${A}-${C}-${n}`, A, C, n / N);
+      const down = [];
+      for (let i = 0; i <= n; i++) down.push(mid(li < ri ? `${li}-${ri}-${i}` : `${ri}-${li}-${n - i}`, li, ri, i / n));
+      tris.push([up[0], down[0], down[1]]);
+      for (let i = 1; i < up.length; i++) {
+        tris.push([up[i], up[i - 1], down[i]]);
+        tris.push([up[i], down[i], down[i + 1]]);
+      }
+      up = down;
+    }
+  }
+  return { pts, tris };
+}
+
+/** Acidome Kruschke: Chords, then pull each spoke around the 12 base hubs to Kruschke's length (3V and 4V only). */
+function acKruschke(base, N) {
+  const mesh = acChords(base, N);
+  const mr = N === 3 ? 0.9442890204731844 : 0.22219 / 0.253185 * 0.9983958444733023;
+  const nBase = base.verts.length;
+  for (const [a, b] of edgesOf(mesh.tris, mesh.pts.length).edges) {
+    if ((a < nBase) === (b < nBase)) continue;
+    const E = a < nBase ? a : b, S = a < nBase ? b : a;
+    mesh.pts[S] = norm(add(mul(mesh.pts[E], 1 - mr), mul(mesh.pts[S], mr)));
+  }
+  return mesh;
+}
+
+/** Acidome splitFaces_EA: equal-arc edge points; each inner point is the spherical incentre of three great circles. */
+function acArcs(base, N) {
+  const pts = base.verts.map((p) => p.slice());
+  const cache = new Map();
+  const tris = [];
+  const lines = new Map();
+  const edgePoint = (a, b, i, key) => {
+    key = key || (a < b ? `${a},${b},${i}` : `${b},${a},${N - i}`);
+    if (i * 2 > N) return edgePoint(b, a, N - i, key);
+    const hit = cache.get(key);
+    if (hit !== undefined) return hit;
+    const A = pts[a], B = pts[b];
+    let cos = dot(A, B) / (len(A) * len(B));
+    if (Math.abs(cos - 1) < 1e-9) cos = 1; else if (Math.abs(cos + 1) < 1e-9) cos = -1;
+    const Y = norm(sub(B, mul(A, cos)));
+    const ang = Math.acos(cos) * i / N;
+    pts.push(add(mul(Y, Math.sin(ang)), mul(A, Math.cos(ang))));
+    cache.set(key, pts.length - 1);
+    return pts.length - 1;
+  };
+  const addFace = (A, B, C, side) => {
+    tris.push([A, B, C]);
+    [[B, C], [C, A], [A, B]].forEach(([u, v], k) => {
+      const key = u < v ? u * 1e7 + v : v * 1e7 + u;
+      if (!lines.has(key)) lines.set(key, { a: u, b: v, side: side[k] });
+    });
+  };
+  const circle = (u, v) => norm(cross(pts[u], pts[v]));
+  for (const [A, B, C] of base.faces) {
+    const seg = (a, b) => { const s = [a]; for (let i = 1; i < N; i++) s.push(edgePoint(a, b, i)); s.push(b); return s; };
+    const AB = seg(A, B), BC = seg(B, C), CA = seg(C, A);
+    let up = [A];
+    for (let n = 1; n <= N; n++) {
+      const down = [CA[N - n]];
+      for (let i = 1; i < n; i++) {
+        if (n === N) { down.push(BC[N - i]); continue; }
+        const n1 = circle(AB[n], CA[N - n]), n2 = circle(BC[N - i], AB[i]), n3 = circle(CA[N - n + i], BC[n - i]);
+        let x = norm(cross(sub(n1, n2), sub(n3, n2)));
+        if (dot(x, pts[A]) < 0) x = mul(x, -1);
+        pts.push(x);
+        down.push(pts.length - 1);
+      }
+      down.push(AB[n]);
+      for (let i = 0; i < n; i++) {
+        addFace(up[i], down[i + 1], down[i], [n, N - i, N - n + i + 1]);
+        if (i > 0) addFace(down[i], up[i - 1], up[i], [n - 1, N - i, N - n + i]);
+      }
+      up = down;
+    }
+  }
+  return { pts, tris, lines: [...lines.values()] };
+}
+
+/** Acidome Mexican: Arcs, then equalise strut lengths within each grid-line family (300 passes max). */
+function acMexican(base, N) {
+  const mesh = acArcs(base, N);
+  const pts = mesh.pts;
+  const groups = new Map();
+  for (const l of mesh.lines) { if (!groups.has(l.side)) groups.set(l.side, []); groups.get(l.side).push(l); }
+  const ordered = [...groups.keys()].sort((a, b) => a - b).map((k) => groups.get(k));
+  // Acidome means to push every hub back onto the sphere after each pass, but it collects the hubs with
+  // underscore 1.8's flatten() on an object, which returns [], so nothing is renormalised and hubs drift
+  // slightly outward (about 0.003% at 4V). We skip it too so lengths match what Acidome really outputs.
+  let step = 0, delta;
+  do {
+    delta = 0;
+    for (const l of mesh.lines) { l.d = sub(pts[l.a], pts[l.b]); l.len = len(l.d); }
+    for (const g of ordered) {
+      let mn = Infinity, mx = -Infinity, sum = 0;
+      for (const l of g) { mn = Math.min(mn, l.len); mx = Math.max(mx, l.len); sum += l.len; }
+      const diff = mx - mn;
+      if (diff < 1e-12) continue;
+      delta = Math.max(delta, diff);
+      const avg = sum / g.length;
+      for (const l of g) {
+        const q = (avg - l.len) / l.len / 4;
+        pts[l.a] = add(pts[l.a], mul(l.d, q));
+        pts[l.b] = add(pts[l.b], mul(l.d, -q));
+      }
+    }
+  } while (delta && ++step < 300);
+  return mesh;
+}
+
+/** Faces sharing each edge, for the wave cut. */
+function faceNeighbours(tris, n) {
+  const byEdge = new Map();
+  tris.forEach((t, f) => {
+    for (let k = 0; k < 3; k++) {
+      const a = t[k], b = t[(k + 1) % 3];
+      const key = a < b ? a * n + b : b * n + a;
+      if (!byEdge.has(key)) byEdge.set(key, []);
+      byEdge.get(key).push(f);
+    }
+  });
+  const nb = tris.map(() => []);
+  for (const fs of byEdge.values()) for (const f of fs) for (const g of fs) if (f !== g) nb[f].push(g);
+  return nb;
+}
+
+/** Acidome sliceByFraction: from the top hub, keep whole waves of edge-adjacent faces until the fraction is reached. */
+function acSliceByFraction(mesh, frac) {
+  const total = mesh.tris.length;
+  let top = 0;
+  mesh.pts.forEach((p, i) => { if (p[1] >= mesh.pts[top][1]) top = i; });
+  const nb = faceNeighbours(mesh.tris, mesh.pts.length);
+  const live = new Array(total).fill(false);
+  let wave = mesh.tris.map((t, f) => (t.includes(top) ? f : -1)).filter((f) => f >= 0);
+  let count = 0;
+  while (count < frac.value * total - 1e-9 && wave.length) {
+    const ready = new Set();
+    for (const f of wave) { live[f] = true; count++; }
+    for (const f of wave) for (const g of nb[f]) if (!live[g]) ready.add(g);
+    wave = [...ready].sort((a, b) => a - b);
+  }
+  return live;
+}
+
+/** Acidome sliceByAxis: keep faces whose centroid is above y = 1 - 2f (plus faces whose vertices all belong to kept faces). */
+function acSliceByAxis(mesh, frac) {
+  const t = 1 - 2 * frac.value;
+  const flagged = new Uint8Array(mesh.pts.length);
+  for (const tri of mesh.tris) {
+    const c = (mesh.pts[tri[0]][1] + mesh.pts[tri[1]][1] + mesh.pts[tri[2]][1]) / 3;
+    if (Math.abs(c - t) > 1e-6 && c > t) for (const i of tri) flagged[i] = 1;
+  }
+  return mesh.tris.map((tri) => tri.every((i) => flagged[i]));
+}
+
+/** Acidome groundSliced: move boundary hubs along their meridians to the boundary height closest to the equator. */
+function flattenBase(mesh, keep, axis) {
+  const inKept = new Uint8Array(mesh.pts.length), inCut = new Uint8Array(mesh.pts.length);
+  mesh.tris.forEach((t, f) => { for (const i of t) (keep[f] ? inKept : inCut)[i] = 1; });
+  const boundary = [];
+  for (let i = 0; i < mesh.pts.length; i++) if (inKept[i] && inCut[i]) boundary.push(i);
+  if (!boundary.length) return;
+  let aval = false;
+  for (const i of boundary) {
+    const y = mesh.pts[i][axis];
+    aval = aval && Math.abs(aval) < Math.abs(y) ? aval : y;
+  }
+  for (const i of boundary) {
+    const p = mesh.pts[i].slice();
+    if (Math.abs(p[axis] - aval) <= 1e-6) continue;
+    p[axis] = aval;
+    const l = len(p);
+    const q = Math.sqrt((1 - aval * aval) / (l * l - aval * aval));
+    for (let k = 0; k < 3; k++) if (k !== axis) p[k] *= q;
+    mesh.pts[i] = p;
+  }
+}
+
+/* ---------- Methods ---------- */
+const ACIDOME_CREDIT = 'Subdivision ported from the Acidome calculator (acidome.ru/lab/calc, by popitch)';
+const METHODS = {
+  chords: {
+    label: 'Chords (Acidome)', acidome: 'Chords', credit: ACIDOME_CREDIT,
+    hint: 'Acidome’s “Equal Chords”: each row point is the normalised midpoint of two points already on the sphere, built out from one corner of each base triangle.',
+    build: acChords,
+  },
+  arcs: {
+    label: 'Arcs (Acidome)', acidome: 'Arcs', credit: ACIDOME_CREDIT,
+    hint: 'Acidome’s “Equal Arcs”: base edges split into equal arcs; each inner hub is the spherical incentre of the three great circles through it.',
+    build: acArcs,
+  },
+  mexican: {
+    label: 'Mexican (Acidome)', acidome: 'Mexican', credit: ACIDOME_CREDIT,
+    hint: 'Arcs, then struts on the same grid line are nudged to equal length (up to 300 passes, as in Acidome). Fewer strut types than Arcs.',
+    build: acMexican,
+  },
+  kruschke: {
+    label: 'Kruschke (Acidome)', acidome: 'Kruschke', credit: ACIDOME_CREDIT,
+    hint: 'Chords, then the spokes around each pentagon hub are pulled to Kruschke’s length. Defined for 3V and 4V icosahedra only.',
+    build: acKruschke,
+  },
+  flat: {
+    label: 'Flat grid (DomeZ classic)', acidome: 'Chords',
+    hint: 'Equal divisions of the flat base triangle pushed out to the sphere, keeping faces whose hubs are all above the cut. The original DomeZ generator; its native orientation is Cross for the icosahedron and Pentad for the octahedron.',
+  },
+};
+
+/** Methods Acidome accepts for this base and frequency (its form falls back to Chords otherwise). */
+function effectiveMethod(p) {
+  if (p.method === 'kruschke' && !(p.base === 'icosahedron' && (p.freq === 3 || p.freq === 4))) return 'chords';
+  return p.method;
+}
+
+/* ---------- Partial fractions ---------- */
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+/** "7/12", "0.583" or "1" -> { value, p, q } (p and q only for fractions). */
+function parsePartial(s) {
+  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(s));
+  if (m && +m[2] > 0) {
+    const p = +m[1], q = +m[2], g = gcd(p, q) || 1;
+    return { value: Math.min(1, p / q), p: p / g, q: q / g };
+  }
+  const v = parseFloat(s);
+  return { value: Number.isFinite(v) ? Math.min(1, Math.max(0.01, v)) : 0.5 };
+}
+const fracText = (s) => { const f = parsePartial(s); return f.value >= 1 ? '1/1' : f.q ? `${f.p}/${f.q}` : String(+f.value.toFixed(3)); };
+
+/** The fractions Acidome offers for a base and frequency: they land on complete rows of faces. */
+function acidomePartials(base, V) {
+  const list = [];
+  if (base === 'octahedron') {
+    const V2 = V * V;
+    for (let p = 1; p <= V; p++) list.push([p * p, 2 * V2]);
+    for (let p2 = 0, p = V; p >= 1; p--) { p2 += 2 * p - 1; list.push([V2 + p2, 2 * V2]); }
+  } else {
+    for (let p = V, q = V * 4; p <= V * 4; p += p !== V * 3 ? 2 : V) list.push([p, q]);
+  }
+  return list.map(([p, q]) => { const g = gcd(p, q); return `${p / g}/${q / g}`; });
+}
+/** Acidome snaps any other fraction to the nearest one it offers. */
+function nearestAcidomePartial(base, V, value) {
+  let best = '1/1', gap = Infinity;
+  for (const c of acidomePartials(base, V)) {
+    const d = Math.abs(parsePartial(c).value - value);
+    if (d < gap - 1e-12) { gap = d; best = c; }
+  }
+  return best;
+}
+/** The fraction actually built: Acidome methods use Acidome's row fractions; the Python grid takes any value. */
+function effectivePartial(p) {
+  const f = parsePartial(p.partial);
+  if (f.value >= 1) return '1/1';
+  return p.method === 'flat' ? p.partial : nearestAcidomePartial(p.base, p.freq, f.value);
+}
+
+/* ---------- Pipeline ---------- */
+
+/** Unit-sphere mesh after subdivision, cut and optional base flattening, z-up. */
+function buildUnitGeodesic(p) {
+  const frac = parsePartial(effectivePartial(p));
+  const f = Math.max(1, p.freq | 0);
+  let mesh, keep;
+  if (p.method === 'flat') {
+    mesh = pythonGeodesic(p.base, p.sym, f);
+    keep = pythonCut(mesh, frac.value);
+    if (p.flat && frac.value < 1) flattenBase(mesh, keep, 2);
+  } else {
+    const m = METHODS[effectiveMethod(p)];
+    mesh = m.build(acidomeBase(p.base, p.sym), f);
+    if (frac.value >= 1) keep = mesh.tris.map(() => true);
+    else keep = p.sym === 'pentad' ? acSliceByFraction(mesh, frac) : acSliceByAxis(mesh, frac);
+    if (p.flat && frac.value < 1) flattenBase(mesh, keep, 1);
+    // y-up -> z-up, and flip Acidome's inward winding so faces point out.
+    mesh = { pts: mesh.pts.map((q) => [q[0], -q[2], q[1]]), tris: mesh.tris.map((t) => [t[0], t[2], t[1]]) };
+  }
+  return compact({ pts: mesh.pts, tris: mesh.tris.filter((t, i) => keep[i]) });
+}
+
+/** Drop vertices no face uses, keeping the original order. */
+function compact(mesh) {
+  const used = new Uint8Array(mesh.pts.length);
+  for (const t of mesh.tris) for (const i of t) used[i] = 1;
+  const remap = new Int32Array(mesh.pts.length).fill(-1);
+  const pts = [];
+  mesh.pts.forEach((q, i) => { if (used[i]) { remap[i] = pts.length; pts.push(q); } });
+  return { pts, tris: mesh.tris.map((t) => t.map((i) => remap[i])) };
+}
+
+function edgesOf(tris, n) {
+  const seen = new Map();
+  const edges = [];
+  const faceCount = [];
+  for (const t of tris) {
+    for (let k = 0; k < 3; k++) {
+      const a = t[k], b = t[(k + 1) % 3];
+      const key = a < b ? a * n + b : b * n + a;
+      const e = seen.get(key);
+      if (e === undefined) { seen.set(key, edges.length); edges.push(a < b ? [a, b] : [b, a]); faceCount.push(1); }
+      else faceCount[e]++;
+    }
+  }
+  return { edges, faceCount };
+}
+
+/** Unit sphere -> final shape in metres. */
+function shapeTransform(p) {
+  if (p.shape === 'ellipsoid') return (q) => [q[0] * p.rx, q[1] * p.ry, q[2] * p.rz];
+  if (p.shape === 'egg') {
+    // Hügelschäffer egg: r(t) = (B/2) * sqrt((L² - 4t²) / (L² + 8wt + 4w²)), t along the axis.
+    // A unit-sphere point at height z maps to t = zL/2; its horizontal radius sqrt(1-z²) scales by
+    // r(t)/sqrt(1-z²) = (B/2)·L / sqrt(L² + 8wt + 4w²), which stays finite at the poles.
+    const L = p.eggL, B = p.eggB, w = p.eggW * L * (p.eggTip === 'up' ? 1 : -1);
+    return (q) => {
+      const t = q[2] * L / 2;
+      const s = (B / 2) * L / Math.sqrt(L * L + 8 * w * t + 4 * w * w);
+      return [q[0] * s, q[1] * s, t];
+    };
+  }
+  return (q) => mul(q, p.r);
+}
+
+/** Group strut lengths: a new type starts when a length exceeds its group's shortest by more than tol. */
+function groupStruts(lengths, tolM) {
+  const order = lengths.map((l, i) => i).sort((a, b) => lengths[a] - lengths[b]);
+  const eps = Math.max(tolM, 1e-9);
+  const groups = [];
+  const groupOf = new Int32Array(lengths.length);
+  let cur = null;
+  for (const i of order) {
+    const l = lengths[i];
+    if (!cur || l - cur.min > eps) { cur = { min: l, max: l, sum: 0, count: 0 }; groups.push(cur); }
+    cur.max = l; cur.sum += l; cur.count++;
+    groupOf[i] = groups.length - 1;
+  }
+  groups.forEach((g, k) => { g.mean = g.sum / g.count; g.label = typeLabel(k); });
+  return { groups, groupOf };
+}
+const typeLabel = (k) => { let s = ''; k++; while (k > 0) { k--; s = String.fromCharCode(65 + (k % 26)) + s; k = Math.floor(k / 26); } return s; };
+
+function buildModel(p) {
+  const mesh = buildUnitGeodesic(p);
+  const T = shapeTransform(p);
+  const pts = mesh.pts.map(T);
+  const tris = mesh.tris;
+  const { edges } = edgesOf(tris, pts.length);
+  const lengths = edges.map(([a, b]) => len(sub(pts[a], pts[b])));
+  const { groups, groupOf } = groupStruts(lengths, p.tol / 1000);
+
+  const degree = new Int32Array(pts.length);
+  for (const [a, b] of edges) { degree[a]++; degree[b]++; }
+  const hubs = {};
+  for (const d of degree) hubs[d] = (hubs[d] || 0) + 1;
+
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (const q of pts) for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k], q[k]); max[k] = Math.max(max[k], q[k]); }
+  const origin = [0, 0, min[2]];
+  let area = 0, vol = 0;
+  for (const [a, b, c] of tris) {
+    const A = pts[a], B = pts[b], C = pts[c];
+    area += len(cross(sub(B, A), sub(C, A))) / 2;
+    vol += dot(sub(A, origin), cross(sub(B, origin), sub(C, origin))) / 6;
+  }
+  return { pts, tris, edges, lengths, groups, groupOf, hubs, min, max, area, volume: Math.abs(vol),
+           totalLength: lengths.reduce((s, l) => s + l, 0) };
+}
+
+/* =========================================================================
+   State, URL hash and controls
+   ========================================================================= */
+const DEFAULTS = {
+  shape: 'sphere', r: 2.2, rx: 3, ry: 3, rz: 4.5, eggL: 6, eggB: 4.4, eggW: 0.08, eggTip: 'up',
+  base: 'icosahedron', freq: 3, method: 'kruschke', sym: 'pentad', partial: '7/12', flat: false,
+  panels: 'glass', showStruts: true, showHubs: true, colorTypes: true, spin: false,
+  tol: 1, conn: 'GoodKarma', beamW: 120, beamT: 40, upAxis: 'z', objLines: false,
+};
+const NUMERIC = new Set(['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'beamW', 'beamT']);
+const BOOLEAN = new Set(['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']);
+
+function readHash() {
+  const s = { ...DEFAULTS };
+  const q = new URLSearchParams(location.hash.slice(1));
+  for (const [k, v] of q) {
+    if (!(k in DEFAULTS)) continue;
+    if (NUMERIC.has(k)) { const n = parseFloat(v); if (Number.isFinite(n)) s[k] = n; }
+    else if (BOOLEAN.has(k)) s[k] = v === '1';
+    else s[k] = v;
+  }
+  if (!METHODS[s.method]) s.method = DEFAULTS.method;
+  if (s.base !== 'octahedron') s.base = 'icosahedron';
+  if (!SYMMETRY_OPTIONS.some((x) => x.v === s.sym)) s.sym = DEFAULTS.sym;
+  s.freq = Math.min(12, Math.max(1, Math.round(s.freq)));
+  return s;
+}
+function writeHash() {
+  const q = new URLSearchParams();
+  for (const k of Object.keys(DEFAULTS)) {
+    if (state[k] === DEFAULTS[k]) continue;
+    q.set(k, BOOLEAN.has(k) ? (state[k] ? '1' : '0') : String(state[k]));
+  }
+  history.replaceState(null, '', '#' + q.toString());
+}
+
+let state = readHash();
+const $ = (id) => document.getElementById(id);
+
+const fmtM = (m) => (m >= 10 ? m.toFixed(2) : m.toFixed(3)) + ' m';
+const fmtLen = (m) => (m < 1 ? (m * 1000).toFixed(1) + ' mm' : m.toFixed(4) + ' m');
+
+function syncControls() {
+  document.querySelectorAll('.seg[data-key]').forEach((seg) => {
+    seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(state[seg.dataset.key] === b.dataset.v)));
+  });
+  document.querySelectorAll('[data-show]').forEach((el) => {
+    const [k, v] = el.dataset.show.split('=');
+    el.hidden = state[k] !== v;
+  });
+  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol']) $(id).value = state[id];
+  $('partial').value = parsePartial(effectivePartial(state)).value;
+  document.querySelectorAll('input[type=number][data-for]').forEach((n) => { n.value = state[n.dataset.for]; });
+  document.querySelector('output[data-for=freq]').textContent = state.freq + 'V';
+  document.querySelector('output[data-for=partial]').textContent = fracText(effectivePartial(state));
+  document.querySelector('output[data-for=eggW]').textContent = Math.round(state.eggW * 100) + '%';
+  document.querySelector('output[data-for=tol]').textContent = state.tol + ' mm';
+  for (const id of ['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']) $(id).checked = state[id];
+  $('method').value = state.method;
+  $('sym').innerHTML = SYMMETRY_OPTIONS.map((s) => `<option value="${s.v}">${s.label}${state.method === 'flat' && PY_NATIVE_SYM[state.base] === s.v ? ' (Python)' : ''}</option>`).join('');
+  $('sym').value = state.sym;
+  $('conn').value = state.conn; $('beamW').value = state.beamW; $('beamT').value = state.beamT; $('upAxis').value = state.upAxis;
+  $('methodHint').textContent = methodHint();
+  $('methodHint').className = 'hint' + (methodWarning() ? ' warn' : '');
+  const cur = parsePartial(effectivePartial(state)).value;
+  $('partialChips').innerHTML = acidomePartials(state.base, state.freq)
+    .map((f) => `<button data-v="${f}" aria-pressed="${Math.abs(parsePartial(f).value - cur) < 1e-9}">${f === '1/1' ? 'Full' : f}</button>`).join('');
+  $('cutHint').textContent = cutHint();
+}
+
+function methodWarning() {
+  if (state.method === 'kruschke' && effectiveMethod(state) !== 'kruschke')
+    return 'So this is plain Chords here, as in Acidome.';
+  return '';
+}
+function methodHint() { return [METHODS[state.method].hint, methodWarning()].filter(Boolean).join(' '); }
+function cutHint() {
+  if (state.method === 'flat') return 'Keeps faces whose three hubs are all above the cut height (the flat grid\u2019s rule). The chips are the fractions that end on complete rows in Acidome.';
+  if (state.sym === 'pentad') return 'Acidome\u2019s rule: keeps whole rows of faces growing down from the top hub until this fraction of all faces is reached. Like Acidome, only these row fractions are offered.';
+  return 'Acidome\u2019s rule for Cross and Triad: keeps faces whose centre is above the cut height. Like Acidome, only these fractions are offered.';
+}
+
+function set(patch) {
+  Object.assign(state, patch);
+  syncControls();
+  scheduleRebuild();
+}
+
+function wireControls() {
+  $('method').innerHTML = Object.entries(METHODS).map(([k, m]) => `<option value="${k}">${m.label}</option>`).join('');
+  $('partialChips').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) set({ partial: b.dataset.v }); });
+  document.querySelectorAll('.seg[data-key]').forEach((seg) => seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (b) set({ [seg.dataset.key]: b.dataset.v });
+  }));
+  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol']) {
+    $(id).addEventListener('input', () => set({ [id]: parseFloat($(id).value) }));
+  }
+  $('partial').addEventListener('input', () => {
+    const v = parseFloat($('partial').value);
+    set({ partial: state.method === 'flat' ? String(+v.toFixed(3)) : nearestAcidomePartial(state.base, state.freq, v) });
+  });
+  document.querySelectorAll('input[type=number][data-for]').forEach((n) => n.addEventListener('change', () => {
+    const v = parseFloat(n.value); if (Number.isFinite(v) && v > 0) set({ [n.dataset.for]: v });
+  }));
+  for (const id of ['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']) $(id).addEventListener('change', () => set({ [id]: $(id).checked }));
+  for (const id of ['method', 'sym', 'conn', 'upAxis']) $(id).addEventListener('change', () => set({ [id]: $(id).value }));
+  for (const id of ['beamW', 'beamT']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
+  $('resetBtn').addEventListener('click', () => { state = { ...DEFAULTS }; pinned = false; lastSize = null; syncControls(); scheduleRebuild(); });
+  $('dlObj').addEventListener('click', downloadObj);
+  $('dlCsv').addEventListener('click', downloadCsv);
+  $('copyLink').addEventListener('click', async () => {
+    writeHash();
+    try { await navigator.clipboard.writeText(location.href); flash($('copyLink'), 'Copied'); }
+    catch { flash($('copyLink'), 'Copy failed'); }
+  });
+  $('fitBtn').addEventListener('click', fitView);
+  $('themeBtn').addEventListener('click', () => {
+    const dark = getComputedStyle(document.documentElement).colorScheme.includes('dark');
+    document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+    applyTheme(); render();
+  });
+}
+function flash(btn, text) { const t = btn.textContent; btn.textContent = text; setTimeout(() => { btn.textContent = t; }, 1200); }
+
+/* =========================================================================
+   Three.js scene
+   ========================================================================= */
+const canvas = $('view');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+} catch (e) {
+  $('err').hidden = false; $('err').textContent = 'WebGL is not available in this browser, so the 3D view cannot be shown. Exports still work.';
+}
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 2000);
+camera.position.set(9, 6, 11);
+const controls = renderer ? new OrbitControls(camera, canvas) : null;
+if (controls) { controls.enableDamping = true; controls.dampingFactor = 0.08; }
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(6, 12, 8);
+scene.add(sun);
+
+const world = new THREE.Group();   // y-up display group
+const model = new THREE.Group();   // z-up model, rotated into y-up
+model.rotation.x = -Math.PI / 2;
+world.add(model);
+scene.add(world);
+
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true);
+const unitSphere = new THREE.SphereGeometry(1, 14, 10);
+const panelMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, flatShading: true, roughness: 0.65, metalness: 0.05,
+  polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+const strutMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 });
+const hubMat = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.2 });
+let panelMesh = null, strutMesh = null, hubMesh = null, grid = null;
+let current = null;
+let highlight = -1;
+let pinned = false;
+let gridSpec = null;
+
+// Categorical palette for a few strut types; a continuous ramp once there are many.
+const CATEGORICAL = ['#3b7ddd', '#e8833a', '#2fa37a', '#c94f7c', '#8a63d2', '#c9a227', '#3fb0c9', '#7f8a3a', '#d4604a', '#5f6fb0'];
+const RAMP = ['#2b4c9b', '#2f7fc1', '#2fa3a0', '#62bb6d', '#b9c64a', '#f0b33c', '#e8743a'];
+function typeColor(k, n) {
+  if (n <= CATEGORICAL.length) return CATEGORICAL[k];
+  const t = n === 1 ? 0 : k / (n - 1);
+  const x = t * (RAMP.length - 1), i = Math.min(RAMP.length - 2, Math.floor(x));
+  return '#' + new THREE.Color(RAMP[i]).lerp(new THREE.Color(RAMP[i + 1]), x - i).getHexString();
+}
+
+function applyTheme() {
+  panelMat.color.set(cssVar('--panel-face'));
+  hubMat.color.set(cssVar('--hub'));
+  makeGrid();
+  if (current) colorStruts();
+}
+
+function makeGrid() {
+  if (grid) { world.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
+  if (!gridSpec) return;
+  const c = cssVar('--grid');
+  grid = new THREE.GridHelper(gridSpec.size, gridSpec.div, c, c);
+  world.add(grid);
+}
+
+function disposeMesh(m) { if (!m) return; model.remove(m); if (m.geometry !== unitCyl && m.geometry !== unitSphere) m.geometry.dispose(); if (m.dispose) m.dispose(); }
+
+function rebuildScene() {
+  const M = current;
+  disposeMesh(panelMesh); disposeMesh(strutMesh); disposeMesh(hubMesh);
+  panelMesh = strutMesh = hubMesh = null;
+
+  const size = Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1], M.max[2] - M.min[2]) || 1;
+  const strutR = size * 0.0045;
+
+  if (M.tris.length) {
+    const pos = new Float32Array(M.tris.length * 9);
+    M.tris.forEach((t, k) => t.forEach((i, c) => pos.set(M.pts[i], k * 9 + c * 3)));
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    panelMesh = new THREE.Mesh(g, panelMat);
+    model.add(panelMesh);
+  }
+
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+  const va = new THREE.Vector3(), vb = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3(), sc = new THREE.Vector3();
+  strutMesh = new THREE.InstancedMesh(unitCyl, strutMat, Math.max(1, M.edges.length));
+  strutMesh.count = M.edges.length;
+  M.edges.forEach(([a, b], k) => {
+    va.fromArray(M.pts[a]); vb.fromArray(M.pts[b]);
+    dir.subVectors(vb, va); const l = dir.length(); dir.normalize();
+    mid.addVectors(va, vb).multiplyScalar(0.5);
+    q.setFromUnitVectors(up, dir);
+    m4.compose(mid, q, sc.set(strutR, l, strutR));
+    strutMesh.setMatrixAt(k, m4);
+  });
+  model.add(strutMesh);
+
+  hubMesh = new THREE.InstancedMesh(unitSphere, hubMat, Math.max(1, M.pts.length));
+  hubMesh.count = M.pts.length;
+  M.pts.forEach((p, k) => { m4.compose(va.fromArray(p), q.identity(), sc.setScalar(strutR * 2.1)); hubMesh.setMatrixAt(k, m4); });
+  model.add(hubMesh);
+
+  // Sit the model on the ground grid.
+  model.position.y = -M.min[2];
+  const span = Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]) * 2.2;
+  const step = span > 40 ? 5 : span > 8 ? 1 : span > 1.6 ? 0.2 : 0.05;
+  const div = Math.max(2, Math.round(span / step));
+  gridSpec = { size: div * step, div };
+
+  highlight = -1;
+  applyTheme();
+  colorStruts();
+  applyVisibility();
+}
+
+function colorStruts() {
+  if (!strutMesh || !current) return;
+  const n = current.groups.length;
+  const base = new THREE.Color(cssVar('--hub'));
+  const c = new THREE.Color();
+  const dim = new THREE.Color(cssVar('--stage'));
+  current.edges.forEach((e, k) => {
+    const g = current.groupOf[k];
+    c.set(state.colorTypes ? typeColor(g, n) : base);
+    if (highlight >= 0 && g !== highlight) c.lerp(dim, 0.82);
+    strutMesh.setColorAt(k, c);
+  });
+  if (strutMesh.instanceColor) strutMesh.instanceColor.needsUpdate = true;
+  document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
+}
+
+function applyVisibility() {
+  if (panelMesh) {
+    panelMesh.visible = state.panels !== 'off';
+    panelMat.transparent = state.panels === 'glass';
+    panelMat.opacity = state.panels === 'glass' ? 0.28 : 1;
+    panelMat.depthWrite = state.panels !== 'glass';
+    panelMat.needsUpdate = true;
+  }
+  if (strutMesh) strutMesh.visible = state.showStruts;
+  if (hubMesh) hubMesh.visible = state.showHubs;
+  if (controls) controls.autoRotate = state.spin;
+}
+
+function modelSize() {
+  if (!current) return 8;
+  return Math.max(current.max[0] - current.min[0], current.max[1] - current.min[1], current.max[2] - current.min[2]) || 1;
+}
+function modelCenter() {
+  const M = current;
+  return new THREE.Vector3((M.min[0] + M.max[0]) / 2, (M.max[2] - M.min[2]) / 2, -(M.min[1] + M.max[1]) / 2);
+}
+function fitView() {
+  if (!current || !controls) return;
+  const c = modelCenter();
+  controls.target.copy(c);
+  const d = modelSize() * 1.9;
+  camera.position.copy(c).add(new THREE.Vector3(0.62, 0.42, 0.66).normalize().multiplyScalar(d));
+  camera.near = d / 200; camera.far = d * 50; camera.updateProjectionMatrix();
+}
+let lastSize = null;
+function keepFraming() {
+  if (!controls) return;
+  const size = modelSize();
+  if (lastSize === null) { fitView(); lastSize = size; return; }
+  const k = size / lastSize;
+  const off = camera.position.clone().sub(controls.target).multiplyScalar(k);
+  controls.target.copy(modelCenter());
+  camera.position.copy(controls.target).add(off);
+  camera.near = size / 200; camera.far = size * 60; camera.updateProjectionMatrix();
+  lastSize = size;
+}
+
+function resize() {
+  if (!renderer) return;
+  const r = canvas.getBoundingClientRect();
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.updateProjectionMatrix();
+}
+function render() { if (renderer) renderer.render(scene, camera); }
+function loop() { requestAnimationFrame(loop); if (controls) controls.update(); render(); }
+
+/* Hover a strut to see its type and length. */
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+canvas.addEventListener('pointermove', (e) => {
+  if (!strutMesh || !state.showStruts || e.buttons) { $('tip').hidden = true; return; }
+  const r = canvas.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObject(strutMesh, false)[0];
+  const tip = $('tip');
+  if (hit && hit.instanceId !== undefined) {
+    const k = hit.instanceId, g = current.groups[current.groupOf[k]];
+    tip.textContent = `Strut ${g.label} · ${fmtLen(current.lengths[k])} · ${g.count} of this type`;
+    tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
+    tip.hidden = false;
+    if (!pinned && highlight !== current.groupOf[k]) { highlight = current.groupOf[k]; colorStruts(); }
+  } else {
+    tip.hidden = true;
+    if (highlight !== -1 && !pinned) { highlight = -1; colorStruts(); }
+  }
+});
+canvas.addEventListener('pointerleave', () => { $('tip').hidden = true; if (!pinned && highlight !== -1) { highlight = -1; colorStruts(); } });
+
+/* =========================================================================
+   Panels: HUD, strut table, Acidome link, Python command
+   ========================================================================= */
+function shapeTitle() {
+  const f = fracText(effectivePartial(state));
+  const part = f === '1/1' ? 'full' : f;
+  const what = state.shape === 'egg' ? 'egg' : state.shape === 'ellipsoid' ? 'ellipsoid' : 'sphere';
+  const m = { chords: 'Chords', arcs: 'Arcs', mexican: 'Mexican', kruschke: 'Kruschke', flat: 'flat-grid' }[effectiveMethod(state)];
+  return `${state.freq}V ${m} ${state.base === 'octahedron' ? 'octa' : 'icosa'} ${what} · ${part}`;
+}
+
+function updatePanels() {
+  const M = current;
+  const h = M.max[2] - M.min[2];
+  const w = Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]);
+  const typeCount = M.groups.length;
+  $('hud').innerHTML = `
+    <div class="title">${shapeTitle()}</div>
+    <span class="k">Hubs</span><span class="v">${M.pts.length}</span>
+    <span class="k">Struts</span><span class="v">${M.edges.length}</span>
+    <span class="k">Strut types</span><span class="v">${typeCount}</span>
+    <span class="k">Panels</span><span class="v">${M.tris.length}</span>
+    <span class="k">Height</span><span class="v">${fmtM(h)}</span>
+    <span class="k">Width</span><span class="v">${fmtM(w)}</span>
+    <span class="k opt">Skin area</span><span class="v opt">${M.area.toFixed(2)} m²</span>
+    <span class="k opt">Volume</span><span class="v opt">${M.volume.toFixed(2)} m³</span>
+    <span class="k opt">Total strut</span><span class="v opt">${M.totalLength.toFixed(1)} m</span>`;
+
+  const isSphere = state.shape === 'sphere';
+  $('cfHead').textContent = isSphere ? 'Chord' : 'Spread';
+  $('strutRows').innerHTML = M.groups.map((g, k) => `
+    <tr data-g="${k}">
+      <td><span class="sw" style="background:${typeColor(k, typeCount)}"></span>${g.label}</td>
+      <td class="n">${fmtLen(g.mean)}</td>
+      <td class="n">${isSphere ? (g.mean / state.r).toFixed(5) : (g.max - g.min < 5e-7 ? '—' : '±' + ((g.max - g.min) * 500).toFixed(1) + ' mm')}</td>
+      <td class="n">${g.count}</td>
+    </tr>`).join('');
+  const many = typeCount > 40;
+  $('strutHint').className = 'hint' + (many ? ' warn' : '');
+  $('strutHint').textContent = many
+    ? `${typeCount} different lengths. Raise "Group within" to merge near-equal struts into fewer types.`
+    : (state.tol > 0 ? `Struts within ${state.tol} mm of each other count as one type.` : 'Every distinct length is its own type.');
+  const hubs = Object.entries(M.hubs).sort((a, b) => a[0] - b[0]).map(([d, n]) => `${n}× ${d}-way`).join(' · ');
+  $('hubLine').textContent = 'Hubs: ' + hubs;
+
+  const ah = acidomeHash();
+  $('acidomeHash').textContent = '#' + ah;
+  $('acidomeLocal').href = OFFLINE_ACIDOME + '#' + ah;
+  $('acidomeLocal').hidden = !offlineAcidome;
+  $('acidomeWeb').href = 'https://acidome.com/lab/calc/#' + ah;
+  $('acidomeHint').textContent = acidomeNotes().join(' ');
+  $('pyCmd').textContent = pythonCommand();
+}
+
+/** The same dome as an Acidome URL hash. Acidome's router needs the tokens in exactly this order. */
+function acidomeHash() {
+  const parts = [];
+  const partial = acidomePartial();
+  const method = METHODS[effectiveMethod(state)].acidome;
+  if (state.base === 'octahedron') parts.push('Octohedron'); // the only spelling Acidome's code acts on
+  if (state.flat && partial !== '1/1' && partial !== '1/2') parts.push('Flat');
+  parts.push(partial);
+  if (method !== 'Chords') parts.push(method);
+  if (state.sym !== 'pentad') parts.push(state.sym[0].toUpperCase() + state.sym.slice(1));
+  parts.push(state.conn);
+  parts.push(`${state.freq}V`);
+  parts.push('R' + +acidomeRadius().toFixed(3));
+  parts.push(`beams_${Math.round(state.beamW)}x${Math.round(state.beamT)}`);
+  return parts.join('_');
+}
+function acidomeRadius() {
+  if (state.shape === 'ellipsoid') return Math.max(state.rx, state.ry);
+  if (state.shape === 'egg') return state.eggB / 2;
+  return state.r;
+}
+/** Acidome snaps the cut to the nearest fraction it offers for this base and frequency. */
+function acidomePartial() {
+  const v = parsePartial(state.partial).value;
+  return v >= 1 ? '1/1' : nearestAcidomePartial(state.base, state.freq, v);
+}
+function acidomeNotes() {
+  const notes = [];
+  if (state.shape !== 'sphere') notes.push(`Acidome only makes spheres, so this opens a sphere of radius ${+acidomeRadius().toFixed(3)} m.`);
+  else notes.push(offlineAcidome ? 'Opens the same dome in Acidome; the offline copy lives in vendor/acidome/.' : 'Opens the same dome on acidome.com.');
+  if (state.method === 'flat') notes.push('Acidome has no flat-grid method, so it shows the Chords version.');
+  if (Math.abs(parsePartial(acidomePartial()).value - parsePartial(effectivePartial(state)).value) > 1e-9) notes.push(`Acidome only offers whole-row fractions, so the cut becomes ${acidomePartial()}.`);
+  if ((state.method === 'arcs' || state.method === 'mexican') && state.freq <= 2) notes.push('Acidome offers Arcs and Mexican from 3V; at this frequency they equal Chords.');
+  if (state.flat) {
+    const p = acidomePartial();
+    if (p === '1/1' || p === '1/2') notes.push('Acidome never flattens a full sphere or a 1/2 dome.');
+    else if (effectiveMethod(state) === 'kruschke') notes.push('Acidome won’t flatten a Kruschke dome.');
+    else if (/^(Cone|Nose)/.test(state.conn)) notes.push('Acidome only flattens with Piped, Joint, GoodKarma or Semicone connectors.');
+  }
+  return notes;
+}
+
+/** The same dome from the Python package (python3 -m domez dome / from domez import ...), leaving out its defaults. */
+function pythonCommand() {
+  const method = effectiveMethod(state);
+  const defaultSym = method === 'flat' ? PY_NATIVE_SYM[state.base] : 'pentad';
+  const f = parsePartial(effectivePartial(state));
+  const full = f.value >= 1;
+  const part = full ? '1' : f.q ? `${f.p}/${f.q}` : String(f.value); // "7/12" is valid Python too
+  const flat = state.flat && !full;
+  if (state.shape === 'sphere') {
+    const args = [`-f ${state.freq}`, `-r ${state.r}`, `-p ${part}`, `-b ${state.base}`];
+    if (method !== 'flat') args.push(`-m ${method}`);
+    if (state.sym !== defaultSym) args.push(`-s ${state.sym}`);
+    if (flat) args.push('--flat-base');
+    return `python3 -m domez dome ${args.join(' ')}`;
+  }
+  const kw = [`base='${state.base}'`];
+  if (!full) kw.push(`partial=${part}`);
+  if (method !== 'flat') kw.push(`method='${method}'`);
+  if (state.sym !== defaultSym) kw.push(`symmetry='${state.sym}'`);
+  if (flat) kw.push('flat_base=True');
+  if (state.shape === 'ellipsoid') {
+    return `from domez import EllipsoidalGeodesic\nEllipsoidalGeodesic(${state.freq}, ${state.rx}, ${state.ry}, ${state.rz},\n    ${kw.join(', ')})\\\n    .generate().to_obj('ellipsoid.obj')`;
+  }
+  const asymmetry = state.eggTip === 'up' ? state.eggW : -state.eggW;
+  return `from domez import EggGeodesic\nEggGeodesic(${state.freq}, length=${state.eggL}, breadth=${state.eggB}, asymmetry=${asymmetry},\n    ${kw.join(', ')})\\\n    .generate().to_obj('egg.obj')`;
+}
+
+/* =========================================================================
+   Export
+   ========================================================================= */
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function baseName() {
+  const f = fracText(effectivePartial(state));
+  const part = f === '1/1' ? 'full' : f.replace('/', '-').replace('.', '_');
+  return `${state.shape}_${state.freq}v_${effectiveMethod(state)}_${part}`;
+}
+function shapeLine() {
+  if (state.shape === 'egg') return `# Shape: Hügelschäffer egg, length ${state.eggL} m, breadth ${state.eggB} m, asymmetry ${Math.round(state.eggW * 100)}%, pointed end ${state.eggTip}`;
+  if (state.shape === 'ellipsoid') return `# Shape: ellipsoid, radii X=${state.rx} m, Y=${state.ry} m, Z=${state.rz} m`;
+  return `# Shape: sphere, radius ${state.r} m`;
+}
+function downloadObj() {
+  const M = current;
+  const toOut = state.upAxis === 'y' ? (p) => [p[0], p[2], -p[1]] : (p) => p;
+  const lines = [
+    '# DomeZ viewer export',
+    shapeLine(),
+    `# Frequency: ${state.freq}V, base: ${state.base}, method: ${METHODS[effectiveMethod(state)].label}, symmetry: ${state.sym}`,
+    `# Partial: ${fracText(effectivePartial(state)) === '1/1' ? 'full' : fracText(effectivePartial(state))}${state.flat ? ', flattened base' : ''}`,
+    `# Units: metres, up axis: ${state.upAxis.toUpperCase()}`,
+    `# Vertices: ${M.pts.length}`,
+    `# Faces: ${M.tris.length}`,
+    `# Struts: ${M.edges.length} in ${M.groups.length} types (grouped within ${state.tol} mm)`,
+  ];
+  if (METHODS[effectiveMethod(state)].credit) lines.push('# ' + METHODS[effectiveMethod(state)].credit);
+  lines.push('# Viewer link: ' + location.href.split('#')[0] + '#' + new URLSearchParams(Object.entries(state).filter(([k, v]) => v !== DEFAULTS[k]).map(([k, v]) => [k, BOOLEAN.has(k) ? (v ? '1' : '0') : String(v)])).toString());
+  lines.push('');
+  for (const p of M.pts) { const q = toOut(p); lines.push(`v ${q[0].toFixed(6)} ${q[1].toFixed(6)} ${q[2].toFixed(6)}`); }
+  lines.push('');
+  for (const t of M.tris) lines.push(`f ${t[0] + 1} ${t[1] + 1} ${t[2] + 1}`);
+  if (state.objLines) { lines.push(''); for (const [a, b] of M.edges) lines.push(`l ${a + 1} ${b + 1}`); }
+  download(baseName() + '.obj', lines.join('\n') + '\n', 'model/obj');
+}
+function downloadCsv() {
+  const M = current;
+  const rows = [['type', 'length_m', 'min_m', 'max_m', 'count']];
+  for (const g of M.groups) rows.push([g.label, g.mean.toFixed(6), g.min.toFixed(6), g.max.toFixed(6), g.count]);
+  rows.push([]);
+  rows.push(['hub_valence', 'count']);
+  for (const [d, n] of Object.entries(M.hubs)) rows.push([d, n]);
+  download(baseName() + '_cutlist.csv', rows.map((r) => r.join(',')).join('\n') + '\n', 'text/csv');
+}
+
+/* =========================================================================
+   Main loop
+   ========================================================================= */
+let pending = false;
+function scheduleRebuild() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    current = buildModel(state);
+    rebuildScene();
+    keepFraming();
+    updatePanels();
+    writeHash();
+  });
+}
+
+$('strutRows').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr'); if (!tr) return;
+  const g = +tr.dataset.g;
+  pinned = highlight !== g || !pinned;
+  highlight = pinned ? g : -1;
+  colorStruts();
+});
+$('strutRows').addEventListener('mouseover', (e) => { const tr = e.target.closest('tr'); if (tr && !pinned) { highlight = +tr.dataset.g; colorStruts(); } });
+$('strutRows').addEventListener('mouseleave', () => { if (!pinned) { highlight = -1; colorStruts(); } });
+
+window.addEventListener('hashchange', () => { const s = readHash(); if (JSON.stringify(s) !== JSON.stringify(state)) { state = s; syncControls(); scheduleRebuild(); } });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (current) applyTheme(); });
+new ResizeObserver(resize).observe(canvas);
+
+/* The offline Acidome copy only exists in a local checkout (vendor/ is git-ignored). When the page is
+   served over http(s), e.g. from GitHub Pages, check for it and hide its button if it isn't there. */
+const OFFLINE_ACIDOME = '../vendor/acidome/acidome-offline.html';
+let offlineAcidome = true;
+if (/^https?:$/.test(location.protocol)) {
+  const missing = () => { offlineAcidome = false; if (current) updatePanels(); };
+  fetch(OFFLINE_ACIDOME, { method: 'HEAD' }).then((r) => { if (!r.ok) missing(); }).catch(missing);
+}
+
+wireControls();
+syncControls();
+resize();
+scheduleRebuild();
+loop();
+
+// Exposed for scripted checks against the Python generator.
+window.DomeZ = { buildModel, buildUnitGeodesic, acidomeHash, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
+</script>
+</body>
+</html>

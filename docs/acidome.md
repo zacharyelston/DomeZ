@@ -54,26 +54,56 @@ vendor/acidome/acidome-offline.html
 
 ## Acidome Height+
 
-`tools/acidome_height.py` turns your offline copy into **Acidome Height+**: Acidome itself, with one extra control that stretches the dome along its vertical axis. Taller domes shed snow; flatter ones cover more floor. Everything else is Acidome's own: the Base, Framework, Scheme, Cover and Tent tabs, the beam cut drawings, the typing and the OBJ export.
+`tools/acidome_height.py` turns your offline copy into **Acidome Height+**: Acidome itself, plus three controls. It can stretch the dome along its vertical axis, give it an egg's pointed top, and list each triangle's opening between the boards as panel form sizes. Taller and pointed domes shed snow; flatter ones cover more floor. Everything else is Acidome's own: the Base, Framework, Scheme, Cover and Tent tabs, the beam cut drawings, the typing and the OBJ export.
 
 ```bash
 python3 tools/acidome_height.py     # vendor/acidome/acidome-offline.html -> vendor/acidome/acidome-height.html
 ```
 
-Open `vendor/acidome/acidome-height.html` in a browser and set **Height ×** under Product options. 1 is plain Acidome; 1.4 makes the dome 40% taller than wide. The factor is kept in the address as `?h=1.4`, next to Acidome's usual hash, e.g. `acidome-height.html?h=1.4#3/4_Joint_3V_R3_beams_120x40`. To serve it rather than open the file: `python3 -m http.server` from the repository root, then go to `http://localhost:8000/vendor/acidome/acidome-height.html`.
+Open `vendor/acidome/acidome-height.html` in a browser. The new fields are under Product options:
 
-What the patch changes, all marked "DomeZ Height+ patch" in the output file:
+| Field | Address | What it does |
+|---|---|---|
+| **Height ×** | `h` | Stretches the dome vertically. 1 is plain Acidome; 1.4 makes it 40% taller than wide. |
+| **Egg point, %** | `egg` | Gives it an egg's pointed top: the widest ring moves down by this share of the height (the same Hügelschäffer egg as the DomeZ viewer). 0 is no egg; negative points it down. |
+| **Panel gap, mm** | `gap` | The gap left between a cast panel and the boards around it, for the panel sizes under Faces. |
 
-1. **A stretch stage.** After Acidome subdivides, cuts and (optionally) flattens the dome, and before it builds beams and hubs, every hub's height is multiplied by the factor. The cut and the flat base stay where Acidome puts them, and every board, hub type and drawing is computed on the stretched dome.
-2. **One Joint fix.** Acidome finds each Joint board's end on the unit sphere and then scales it to the hub's radius, which is only exact when all hubs are the same distance from the centre. The patch solves on the sphere through that hub instead. At height 1 the patch changes nothing.
-3. **The Height × field**, and localhost treated as offline (no redirect to https).
-4. **Privacy for a local copy.** No usage log to acidome.com, no language lookup, and Google Analytics opt-out flags set.
+The settings are kept in the address, next to Acidome's usual hash, e.g. `acidome-height.html?h=1.3&egg=8&gap=10#3/4_Joint_3V_R3_beams_120x40`. To serve the file rather than open it: `python3 -m http.server` from the repository root, then go to `http://localhost:8000/vendor/acidome/acidome-height.html`.
 
-Checked on the Joint reference dome (`3/4_Joint_3V_R3_beams_120x40`):
+### Panel form sizes
 
-- **At height 1:** the board types (A 90, B 50, C 45, D 25), face types and cut drawings are identical to acidome.com.
-- **At height 1.4:** all 210 boards and 135 faces build without warnings, in 28 board types of 5 or 10. Every one of the 420 board ends lies exactly on its own mid-plane, on its neighbour's side face and at its hub's distance from the centre. Without the Joint fix, ends would land up to 8 mm off the neighbour's face.
+Under every face type in the Faces list, a table gives that triangle's **opening**: the space between the side faces of its three boards, where a panel goes. For each side (labelled with its board's letter) it lists:
 
-Like Acidome, Height+ aims every board at the dome's centre. On a stretched dome the boards therefore stay untwisted, but their wide faces tilt away from the skin by a few degrees, up to about 20° at 1.5 : 1 (see the [roadmap](roadmap.md#boards-on-ellipsoids-and-eggs)).
+- the opening's length at the boards' outer face, and at their inner face (one board width deeper; the opening narrows inward because the boards' sides lean toward the dome's centre);
+- the corner angles;
+- with a panel gap set, the panel's side lengths after that gap is left to every board.
 
-The patch applies to Acidome 420+. If a later Acidome version changes the lines it edits, the script stops and says which edit no longer fits. The patched file is for your own use: it contains Acidome's code, so it isn't committed or published, and publishing it would need the author's permission.
+Example, face type 1 of the plain reference dome (`3/4_Joint_3V_R3_beams_120x40`): the real triangle's sides are about 1237, 1236 and 1210 mm. The opening is 1167, 1166 and 1141 mm at the outer face and 1116, 1115 and 1091 mm at the inner face, with corners of 60.8°, 60.7° and 58.6°.
+
+### What the patch changes
+
+All edits are marked "DomeZ Height+ patch" in the output file.
+
+1. **A shape stage.** After Acidome subdivides, cuts and (optionally) flattens the dome, and before it builds beams and hubs, every hub is mapped onto the new shape: its height × h, then the egg profile. The cut and the flat base stay where Acidome puts them, and every board, hub type and drawing is computed on the new shape.
+2. **One Joint fix.** Acidome finds each Joint board's end on the unit sphere and then scales it to the hub's radius, which is only exact when all hubs are the same distance from the centre. The patch solves on the sphere through that hub instead.
+3. **One drawing fix.** To fit long boards, Acidome's cut drawings leave out a middle stretch. It underestimates how far each end reaches along the board, so on stretched and egg domes the left-out stretch could cut into an end and leave stray lines. The printed numbers were never affected.
+4. **The opening tables** under Faces.
+5. **The three fields**, and localhost treated as offline (no redirect to https).
+6. **Privacy for a local copy.** No usage log to acidome.com, no language lookup, and Google Analytics opt-out flags set.
+
+With Height × at 1 and no egg, fixes 2 and 3 are switched off, so the dome, its typing and its drawings are exactly Acidome's.
+
+### Checks
+
+On the Joint reference dome (`3/4_Joint_3V_R3_beams_120x40`):
+
+- **Plain (height 1, no egg):** the board types (A 90, B 50, C 45, D 25), face types and cut drawings are identical to acidome.com.
+- **Height 1.4:** all 210 boards and 135 faces build without warnings, in 28 board types of 5 or 10. Every one of the 420 board ends lies exactly on its own mid-plane, on its neighbour's side face and at its hub's distance from the centre. Without the Joint fix, ends would land up to 8 mm off the neighbour's face.
+- **Height 1.3, egg point 8%:** the widest ring sits below the middle, and all 420 board ends are exact. There are 42 board types and 27 face types, each with its opening table, and a 10 mm gap takes about 40 mm off each panel side.
+
+### Limits
+
+- **Board tilt.** Like Acidome, Height+ aims every board at the dome's centre. On a stretched or egg dome the boards therefore stay untwisted, but their wide faces tilt away from the skin by a few degrees, up to about 20° at 1.5 : 1 (see the [roadmap](roadmap.md#boards-on-ellipsoids-and-eggs)).
+- **Outward-leaning ends.** On eggs, some board ends have their inner face longer than the outer face. Their drawings show the inner cut as a solid line with a blue angle over 90°.
+- **Acidome versions.** The patch applies to Acidome 420+. If a later version changes the lines it edits, the script stops and says which edit no longer fits.
+- **Local use only.** The patched file contains Acidome's code, so it isn't committed or published. Publishing it would need the author's permission.

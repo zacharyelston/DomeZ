@@ -15,7 +15,7 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 
 | | |
 |---|---|
-| **Acidome Height+** (`tools/acidome_height.py`) | Builds a local copy of the Acidome calculator with a **Height ×** control: Acidome's own tabs, Joint and other beam cut drawings and typing, on domes stretched taller or flatter ([details](docs/acidome.md#acidome-height)) |
+| **Acidome Height+** (`tools/acidome_height.py`) | Builds a local copy of the Acidome calculator with **Height ×**, **Egg point** and **Panel gap** controls: Acidome's own tabs, Joint and other beam cut drawings and typing on taller, flatter or egg-shaped domes, plus each triangle's opening as panel form sizes ([details](docs/acidome.md#acidome-height)) |
 | **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; strut and hub tables; OBJ and cut-list export; shareable links |
 | **Python package** (`domez/`) | The same geometry as a library and command line, kept face-for-face identical to the viewer by tests |
 | **Unfolding** | Steepest-edge unfolding of meshes into flat nets, with SVG spec sheets |
@@ -37,7 +37,7 @@ Pick a shape, frequency, method and cut, then download the OBJ or cut list. For 
 python3 tools/acidome_height.py     # writes vendor/acidome/acidome-height.html
 ```
 
-Open the result in a browser and set **Height ×** under Product options. Everything else is Acidome, including the Framework tab's beam cut drawings.
+Open the result in a browser and set **Height ×**, **Egg point, %** and **Panel gap, mm** under Product options. Everything else is Acidome, including the Framework tab's beam cut drawings; each face type also lists its triangle's opening for panel forms.
 
 **Python.** Python 3.8+ with numpy.
 
@@ -64,7 +64,7 @@ The viewer's **Python** box prints the command or snippet for whatever you've de
 | Ellipsoids and Hügelschäffer eggs | ✓ Viewer and Python |
 | Strut and hub types, OBJ, cut-list CSV | ✓ |
 | Flat nets by steepest-edge unfolding | ✓ Platonic solids and 3V domes |
-| Acidome's tabs and lumber cut drawings on stretched domes | ✓ Acidome Height+ (local patch of your Acidome copy) |
+| Acidome's tabs and lumber cut drawings on stretched and egg domes, with panel form sizes | ✓ Acidome Height+ (local patch of your Acidome copy) |
 | Framework: lumber cut drawings in the DomeZ viewer, for eggs | Next |
 | Scheme, Base, Cover and Tent views; panel calculator; snow pitch map; double skins | Planned ([roadmap](docs/roadmap.md)) |
 
@@ -100,6 +100,7 @@ pyproject.toml        package metadata (pip install -e .)
 ```bash
 python3 tests/test_geodesics.py    # Acidome vectors, eggs, options; flat-grid output unchanged
 python3 tests/test_unfolding.py    # unfolding of freshly generated polyhedra
+python3 tests/test_acidome_height.py  # the Acidome Height+ patch (skipped without your Acidome copy)
 pytest                             # both, if pytest is installed
 ```
 

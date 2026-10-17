@@ -137,13 +137,118 @@ def find_shared_vertices(face1, face2):
     return shared
 
 
+def find_connected_components(num_faces, adjacency):
+    """Group faces into pieces connected through shared edges"""
+    component_of = {}
+    components = []
+    
+    for start in range(num_faces):
+        if start in component_of:
+            continue
+        
+        component = []
+        stack = [start]
+        component_of[start] = len(components)
+        while stack:
+            face_idx = stack.pop()
+            component.append(face_idx)
+            for neighbor_face, _ in adjacency[face_idx]:
+                if neighbor_face not in component_of:
+                    component_of[neighbor_face] = len(components)
+                    stack.append(neighbor_face)
+        
+        components.append(sorted(component))
+    
+    return components
+
+
+def side_of_line(point, line_p1, line_p2):
+    """Signed area test: >0 left of p1->p2, <0 right, 0 on the line"""
+    edge = line_p2 - line_p1
+    offset = point - line_p1
+    return edge[0] * offset[1] - edge[1] * offset[0]
+
+
+def reflect_across_line(points, line_p1, line_p2):
+    """Mirror 2D points across the line through p1 and p2"""
+    edge_unit = (line_p2 - line_p1) / np.linalg.norm(line_p2 - line_p1)
+    offsets = points - line_p1
+    proj = np.outer(offsets @ edge_unit, edge_unit)
+    perp = offsets - proj
+    return line_p1 + proj - perp
+
+
+def convex_faces_overlap(face_a, face_b, tolerance):
+    """
+    Separating axis test for two convex 2D faces: True if their interiors
+    intersect by more than `tolerance`. Touching along an edge or at a
+    vertex does not count as overlapping.
+    """
+    for face in (face_a, face_b):
+        for i in range(len(face)):
+            edge = face[(i + 1) % len(face)] - face[i]
+            axis = np.array([-edge[1], edge[0]])
+            axis_len = np.linalg.norm(axis)
+            if axis_len < 1e-12:
+                continue
+            axis = axis / axis_len
+            proj_a = face_a @ axis
+            proj_b = face_b @ axis
+            if min(proj_a.max(), proj_b.max()) - max(proj_a.min(), proj_b.min()) <= tolerance:
+                return False
+    return True
+
+
 def steepest_edge_unfold(vertices, faces):
     """
     Steepest Edge Unfolding Algorithm
     Always unfold across the edge with the largest dihedral angle
+    
+    The greedy edge choice does not guarantee a non-overlapping net, so a
+    face is never attached where it would overlap a face already in its
+    piece. Faces that cannot be attached anywhere start a new piece. Meshes
+    made of several disconnected parts (e.g. a stella octangula, which is
+    two interpenetrating tetrahedra) always unfold into at least one piece
+    per part. Each piece is laid out to the right of the previous one.
     """
     adjacency = build_adjacency(vertices, faces)
+    face_2d_positions = {}
+    num_pieces = 0
     
+    components = find_connected_components(len(faces), adjacency)
+    if len(components) > 1:
+        print(f"Mesh has {len(components)} disconnected parts; unfolding each separately")
+    
+    for component in components:
+        remaining = set(component)
+        while remaining:
+            piece = unfold_piece(vertices, faces, adjacency, min(remaining), remaining)
+            remaining -= piece.keys()
+            num_pieces += 1
+            
+            # Lay this piece out next to the pieces already placed
+            if face_2d_positions:
+                placed_pts = np.vstack(list(face_2d_positions.values()))
+                piece_pts = np.vstack(list(piece.values()))
+                gap = 0.1 * max(np.ptp(placed_pts, axis=0).max(), np.ptp(piece_pts, axis=0).max())
+                shift = np.array([
+                    placed_pts[:, 0].max() + gap - piece_pts[:, 0].min(),
+                    placed_pts[:, 1].min() - piece_pts[:, 1].min(),
+                ])
+                piece = {face_idx: pts + shift for face_idx, pts in piece.items()}
+            
+            face_2d_positions.update(piece)
+    
+    print(f"Placed {len(face_2d_positions)} out of {len(faces)} faces in {num_pieces} piece(s)")
+    
+    return face_2d_positions
+
+
+def unfold_piece(vertices, faces, adjacency, start_face, allowed_faces):
+    """
+    Grow one net piece from start_face, attaching only faces in
+    allowed_faces and skipping any hinge that would cause an overlap
+    """
     # Track placed faces and their 2D positions
     placed = set()
     face_2d_positions = {}
@@ -152,8 +257,6 @@ def steepest_edge_unfold(vertices, faces):
     # Negative angle for max-heap behavior
     pq = []
     
-    # Start with face 0
-    start_face = 0
     face_2d = project_face_to_2d(vertices, faces[start_face])
     
     # Center the first face
@@ -180,7 +283,7 @@ def steepest_edge_unfold(vertices, faces):
         neg_angle, parent_face, child_face, shared_edge = heapq.heappop(pq)
         angle = -neg_angle
         
-        if child_face in placed:
+        if child_face in placed or child_face not in allowed_faces:
             continue
         
         print(f"  Unfolding face {child_face} from {parent_face} (angle: {angle:.1f}°)")
@@ -244,34 +347,44 @@ def steepest_edge_unfold(vertices, faces):
         rotation_matrix = np.array([[cos_a, -sin_a], [sin_a, cos_a]])
         child_2d_rotated = child_2d_centered @ rotation_matrix.T + edge_2d_p1
         
-        # Step 3: Flip across the shared edge (reflection for dihedral = 180°)
-        # Reflect each vertex across the line defined by edge_2d_p1 -> edge_2d_p2
-        edge_vec = edge_2d_p2 - edge_2d_p1
-        edge_len = np.linalg.norm(edge_vec)
-        if edge_len < 1e-10:
+        # Step 3: Make sure the child lies on the far side of the hinge.
+        # Hinging the child down into the parent's plane always lands it on
+        # the opposite side of the shared edge from the parent. The child's
+        # own 2D projection has an arbitrary handedness, so after the
+        # rotation it may sit on top of the parent; if so, mirror it across
+        # the shared edge (which keeps the hinge vertices fixed).
+        if np.linalg.norm(edge_2d_p2 - edge_2d_p1) < 1e-10:
             continue
-        edge_unit = edge_vec / edge_len
         
-        child_2d_final = []
-        for vertex in child_2d_rotated:
-            # Vector from p1 to vertex
-            v = vertex - edge_2d_p1
-            # Project onto edge
-            proj_len = np.dot(v, edge_unit)
-            proj = proj_len * edge_unit
-            # Perpendicular component
-            perp = v - proj
-            # Reflect across edge
-            reflected = edge_2d_p1 + proj - perp
-            child_2d_final.append(reflected)
+        parent_side = side_of_line(parent_2d.mean(axis=0), edge_2d_p1, edge_2d_p2)
+        child_side = side_of_line(child_2d_rotated.mean(axis=0), edge_2d_p1, edge_2d_p2)
         
-        child_2d_final = np.array(child_2d_final)
+        if parent_side * child_side > 0:
+            child_2d_final = reflect_across_line(child_2d_rotated, edge_2d_p1, edge_2d_p2)
+        else:
+            child_2d_final = child_2d_rotated
         
         # Verify edge alignment (both vertices should match exactly)
         v1_error = np.linalg.norm(child_2d_final[idx1_child] - edge_2d_p1)
         v2_error = np.linalg.norm(child_2d_final[idx2_child] - edge_2d_p2)
         if v1_error > 1e-6 or v2_error > 1e-6:
             print(f"    WARNING: Edge alignment error - v1: {v1_error:.2e}, v2: {v2_error:.2e}")
+            continue
+        
+        # Step 4: Refuse this hinge if the child would overlap the net so far.
+        # It may still attach through another neighbor, or start a new piece.
+        tolerance = 1e-7 * np.linalg.norm(edge_2d_p2 - edge_2d_p1)
+        child_min = child_2d_final.min(axis=0)
+        child_max = child_2d_final.max(axis=0)
+        overlapping_face = next(
+            (other for other, other_2d in face_2d_positions.items()
+             if np.all(child_min < other_2d.max(axis=0) - tolerance)
+             and np.all(other_2d.min(axis=0) < child_max - tolerance)
+             and convex_faces_overlap(child_2d_final, other_2d, tolerance)),
+            None
+        )
+        if overlapping_face is not None:
+            print(f"    Skipped: face {child_face} would overlap face {overlapping_face}")
             continue
         
         face_2d_positions[child_face] = child_2d_final
@@ -287,8 +400,6 @@ def steepest_edge_unfold(vertices, faces):
                     neighbor_edge
                 )
                 heapq.heappush(pq, (-angle, child_face, neighbor_face, neighbor_edge))
-    
-    print(f"Placed {len(placed)} out of {len(faces)} faces")
     
     return face_2d_positions
 

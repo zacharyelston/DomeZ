@@ -164,37 +164,77 @@ def test_edge_length_preservation(obj_file, tolerance=1e-6):
         return True
 
 
-def test_no_face_overlaps(obj_file):
+def triangulate_face(face_2d):
+    """Split a convex 2D face into a fan of triangles"""
+    return [np.array([face_2d[0], face_2d[i], face_2d[i + 1]])
+            for i in range(1, len(face_2d) - 1)]
+
+
+def triangles_overlap(tri_a, tri_b, tolerance=1e-6):
     """
-    Test that face centers are not at the same position (basic overlap check)
+    Separating axis test: True if the triangle interiors intersect.
+    Triangles that only touch along an edge or at a vertex do not count,
+    and neither does an intersection thinner than `tolerance`.
+    """
+    for tri in (tri_a, tri_b):
+        for i in range(3):
+            edge = tri[(i + 1) % 3] - tri[i]
+            axis = np.array([-edge[1], edge[0]])
+            axis_len = np.linalg.norm(axis)
+            if axis_len < 1e-12:
+                continue
+            axis = axis / axis_len
+            proj_a = tri_a @ axis
+            proj_b = tri_b @ axis
+            depth = min(proj_a.max(), proj_b.max()) - max(proj_a.min(), proj_b.min())
+            if depth <= tolerance:
+                return False
+    return True
+
+
+def find_face_overlaps(unfolded, tolerance=1e-6):
+    """Return (face, other_face) pairs whose 2D interiors intersect"""
+    face_ids = sorted(unfolded)
+    triangles = {f: triangulate_face(unfolded[f]) for f in face_ids}
+    bounds = {f: (unfolded[f].min(axis=0), unfolded[f].max(axis=0)) for f in face_ids}
+
+    overlaps = []
+    for i, face_a in enumerate(face_ids):
+        min_a, max_a = bounds[face_a]
+        for face_b in face_ids[i + 1:]:
+            min_b, max_b = bounds[face_b]
+            # Cheap bounding-box rejection before the exact test
+            if np.any(min_a > max_b - tolerance) or np.any(min_b > max_a - tolerance):
+                continue
+            if any(triangles_overlap(ta, tb, tolerance)
+                   for ta in triangles[face_a] for tb in triangles[face_b]):
+                overlaps.append((face_a, face_b))
+    return overlaps
+
+
+def test_no_face_overlaps(obj_file, tolerance=1e-6):
+    """
+    Test that no two unfolded faces overlap: their interiors must not
+    intersect anywhere (sharing an edge or a vertex is fine)
     """
     print(f"\nTesting for face overlaps: {Path(obj_file).name}")
-    
+
     vertices, faces = load_obj(obj_file)
     unfolded = steepest_edge_unfold(vertices, faces)
-    
+
     if len(unfolded) == 0:
         print(f"  ✗ FAIL: No faces unfolded")
         return False
-    
-    # Check face centers
-    centers = {}
-    overlaps = []
-    
-    for face_idx, face_2d in unfolded.items():
-        center = tuple(np.round(face_2d.mean(axis=0), 3))
-        if center in centers:
-            overlaps.append((face_idx, centers[center]))
-        else:
-            centers[center] = face_idx
-    
+
+    overlaps = find_face_overlaps(unfolded, tolerance)
+
     if overlaps:
-        print(f"  ⚠ WARNING: {len(overlaps)} potential overlaps detected")
+        print(f"  ✗ FAIL: {len(overlaps)} overlapping face pairs")
         for f1, f2 in overlaps[:3]:
-            print(f"    Face {f1} and Face {f2} at same position")
+            print(f"    Face {f1} overlaps Face {f2}")
         return False
     else:
-        print(f"  ✓ PASS: No obvious overlaps detected")
+        print(f"  ✓ PASS: No faces overlap")
         return True
 
 

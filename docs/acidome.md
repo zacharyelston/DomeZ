@@ -44,10 +44,36 @@ The viewer's output was compared with live acidome.com, using the hubs, struts a
 
 ## Offline copy
 
-Acidome offers a free offline version of the calculator for use without internet ("Acidome offline ⤓" on acidome.com). It's a single HTML file. To use the viewer's **Offline copy** button, save it as:
+Acidome offers a free offline version of the calculator for use without internet ("Acidome offline ⤓" on acidome.com). It's a single HTML file. Save it as:
 
 ```
 vendor/acidome/acidome-offline.html
 ```
 
-`vendor/` is git-ignored and the file is not distributed with DomeZ. Its code carries only a non-standard "Legalize Cannabis License" line, and the OBJ files it exports are marked CC-BY-SA. Even offline, the file still loads Google Analytics and a donation iframe when opened.
+`vendor/` is git-ignored and the file is not distributed with DomeZ. Its code carries only a non-standard "Legalize Cannabis License" line, and the OBJ files it exports are marked CC-BY-SA. Even offline, the unmodified file still loads Google Analytics and a donation iframe when opened.
+
+## Acidome Height+
+
+`tools/acidome_height.py` turns your offline copy into **Acidome Height+**: Acidome itself, with one extra control that stretches the dome along its vertical axis. Taller domes shed snow; flatter ones cover more floor. Everything else is Acidome's own: the Base, Framework, Scheme, Cover and Tent tabs, the beam cut drawings, the typing and the OBJ export.
+
+```bash
+python3 tools/acidome_height.py     # vendor/acidome/acidome-offline.html -> vendor/acidome/acidome-height.html
+```
+
+Open `vendor/acidome/acidome-height.html` in a browser and set **Height ×** under Product options. 1 is plain Acidome; 1.4 makes the dome 40% taller than wide. The factor is kept in the address as `?h=1.4`, next to Acidome's usual hash, e.g. `acidome-height.html?h=1.4#3/4_Joint_3V_R3_beams_120x40`. To serve it rather than open the file: `python3 -m http.server` from the repository root, then go to `http://localhost:8000/vendor/acidome/acidome-height.html`.
+
+What the patch changes, all marked "DomeZ Height+ patch" in the output file:
+
+1. **A stretch stage.** After Acidome subdivides, cuts and (optionally) flattens the dome, and before it builds beams and hubs, every hub's height is multiplied by the factor. The cut and the flat base stay where Acidome puts them, and every board, hub type and drawing is computed on the stretched dome.
+2. **One Joint fix.** Acidome finds each Joint board's end on the unit sphere and then scales it to the hub's radius, which is only exact when all hubs are the same distance from the centre. The patch solves on the sphere through that hub instead. At height 1 the patch changes nothing.
+3. **The Height × field**, and localhost treated as offline (no redirect to https).
+4. **Privacy for a local copy.** No usage log to acidome.com, no language lookup, and Google Analytics opt-out flags set.
+
+Checked on the Joint reference dome (`3/4_Joint_3V_R3_beams_120x40`):
+
+- **At height 1:** the board types (A 90, B 50, C 45, D 25), face types and cut drawings are identical to acidome.com.
+- **At height 1.4:** all 210 boards and 135 faces build without warnings, in 28 board types of 5 or 10. Every one of the 420 board ends lies exactly on its own mid-plane, on its neighbour's side face and at its hub's distance from the centre. Without the Joint fix, ends would land up to 8 mm off the neighbour's face.
+
+Like Acidome, Height+ aims every board at the dome's centre. On a stretched dome the boards therefore stay untwisted, but their wide faces tilt away from the skin by a few degrees, up to about 20° at 1.5 : 1 (see the [roadmap](roadmap.md#boards-on-ellipsoids-and-eggs)).
+
+The patch applies to Acidome 420+. If a later Acidome version changes the lines it edits, the script stops and says which edit no longer fits. The patched file is for your own use: it contains Acidome's code, so it isn't committed or published, and publishing it would need the author's permission.

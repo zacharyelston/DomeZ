@@ -1200,7 +1200,8 @@ function updatePanels() {
 
   const ah = acidomeHash();
   $('acidomeHash').textContent = '#' + ah;
-  $('acidomeLocal').href = '../vendor/acidome/acidome-offline.html#' + ah;
+  $('acidomeLocal').href = OFFLINE_ACIDOME + '#' + ah;
+  $('acidomeLocal').hidden = !offlineAcidome;
   $('acidomeWeb').href = 'https://acidome.com/lab/calc/#' + ah;
   $('acidomeHint').textContent = acidomeNotes().join(' ');
   $('pyCmd').textContent = pythonCommand();
@@ -1235,7 +1236,7 @@ function acidomePartial() {
 function acidomeNotes() {
   const notes = [];
   if (state.shape !== 'sphere') notes.push(`Acidome only makes spheres, so this opens a sphere of radius ${+acidomeRadius().toFixed(3)} m.`);
-  else notes.push('Opens the same dome in Acidome; the offline copy lives in vendor/acidome/.');
+  else notes.push(offlineAcidome ? 'Opens the same dome in Acidome; the offline copy lives in vendor/acidome/.' : 'Opens the same dome on acidome.com.');
   if (state.method === 'flat') notes.push('Acidome has no flat-grid method, so it shows the Chords version.');
   if (Math.abs(parsePartial(acidomePartial()).value - parsePartial(effectivePartial(state)).value) > 1e-9) notes.push(`Acidome only offers whole-row fractions, so the cut becomes ${acidomePartial()}.`);
   if ((state.method === 'arcs' || state.method === 'mexican') && state.freq <= 2) notes.push('Acidome offers Arcs and Mexican from 3V; at this frequency they equal Chords.');
@@ -1356,6 +1357,15 @@ $('strutRows').addEventListener('mouseleave', () => { if (!pinned) { highlight =
 window.addEventListener('hashchange', () => { const s = readHash(); if (JSON.stringify(s) !== JSON.stringify(state)) { state = s; syncControls(); scheduleRebuild(); } });
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (current) applyTheme(); });
 new ResizeObserver(resize).observe(canvas);
+
+/* The offline Acidome copy only exists in a local checkout (vendor/ is git-ignored). When the page is
+   served over http(s), e.g. from GitHub Pages, check for it and hide its button if it isn't there. */
+const OFFLINE_ACIDOME = '../vendor/acidome/acidome-offline.html';
+let offlineAcidome = true;
+if (/^https?:$/.test(location.protocol)) {
+  const missing = () => { offlineAcidome = false; if (current) updatePanels(); };
+  fetch(OFFLINE_ACIDOME, { method: 'HEAD' }).then((r) => { if (!r.ok) missing(); }).catch(missing);
+}
 
 wireControls();
 syncControls();

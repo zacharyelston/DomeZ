@@ -2,6 +2,8 @@
 
 **Acidome with Height+**: design geodesic domes, ellipsoids and eggs, and get what you need to build them.
 
+**Try it: [zacharyelston.github.io/DomeZ](https://zacharyelston.github.io/DomeZ/)**
+
 DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/) dome calculator, matching it exactly, and extends it beyond the sphere. The aim is that anyone can design an optimal shelter themselves and come away with plans to build it.
 
 ## Why
@@ -20,13 +22,13 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 
 ## Quick start
 
-**Viewer.** Open the file in a browser; there's no install or server.
+**Viewer.** Use the [hosted viewer](https://zacharyelston.github.io/DomeZ/), or open the file locally; there's no install or server.
 
 ```bash
 open web/index.html
 ```
 
-Pick a shape, frequency, method and cut, then download the OBJ or cut list. For example, a 5V Mexican egg cut at 3/4 and standing flat: `web/index.html#shape=egg&freq=5&method=mexican&partial=3%2F4&flat=1`
+Pick a shape, frequency, method and cut, then download the OBJ or cut list. For example, a [5V Mexican egg cut at 3/4 and standing flat](https://zacharyelston.github.io/DomeZ/#shape=egg&freq=5&method=mexican&partial=3%2F4&flat=1).
 
 **Python.** Python 3.8+ with numpy.
 
@@ -71,6 +73,7 @@ examples/             domes.py, moonpies/ (spacecraft example), gallery/ (SVG ne
 docs/                 documentation (start at docs/README.md)
 geodesic-rs/          Rust prototype
 pyproject.toml        package metadata (pip install -e .)
+.github/workflows/    pages.yml publishes web/ to GitHub Pages on every push to main
 ```
 
 ## Documentation

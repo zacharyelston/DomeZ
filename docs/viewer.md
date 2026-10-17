@@ -1,6 +1,9 @@
 # Web viewer
 
-`web/index.html` is a single-page 3D viewer for designing a dome, ellipsoid or egg and exporting it. Open the file in any modern browser; there's no server or build step. It loads Three.js 0.160 from the jsDelivr CDN, so the first load needs a network connection.
+`web/index.html` is a single-page 3D viewer for designing a dome, ellipsoid or egg and exporting it.
+
+- **Hosted:** [zacharyelston.github.io/DomeZ](https://zacharyelston.github.io/DomeZ/), published from `web/` by `.github/workflows/pages.yml` on every push to `main` that changes the viewer.
+- **Local:** open the file in any modern browser; there's no server or build step. It loads Three.js 0.160 from the jsDelivr CDN, so the first load needs a network connection.
 
 ```bash
 open web/index.html          # macOS; or double-click the file
@@ -52,7 +55,7 @@ Connector type and beam size. These are currently passed through to the Acidome 
 
 ### Acidome and Python boxes
 
-- **Acidome**: the same dome as an Acidome URL hash, with buttons for acidome.com and for a local offline copy (see [acidome.md](acidome.md#offline-copy)). Acidome only builds spheres, so ellipsoids and eggs open as the nearest sphere; the box notes any other difference.
+- **Acidome**: the same dome as an Acidome URL hash, with buttons for acidome.com and for a local offline copy (see [acidome.md](acidome.md#offline-copy)). The offline button only appears when the copy is present, so the hosted viewer shows acidome.com only. Acidome only builds spheres, so ellipsoids and eggs open as the nearest sphere; the box notes any other difference.
 - **Python**: the `python3 -m domez dome …` command, or `from domez import …` snippet, that builds the same mesh. See [python.md](python.md).
 
 ## URL parameters

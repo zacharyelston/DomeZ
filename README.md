@@ -43,6 +43,27 @@ python3 polyhedra_generator.py --type all
 # Output: dome_output/*.obj and polyhedra_output/*.obj files ready to import
 ```
 
+## Web Viewer
+
+`web/index.html` is a single-page 3D viewer for setting dome parameters interactively. Open it directly in a browser (no server or build step). It loads Three.js from a CDN, so the first load needs a network connection.
+
+```bash
+open web/index.html
+```
+
+- **Shapes**: sphere, ellipsoid (independent X/Y/Z radii) and a true asymmetric egg (Hügelschäffer curve: length, breadth, asymmetry, pointed end up or down)
+- **Geodesic**: icosahedron or octahedron base, frequency 1–12V, and orientation (Pentad = vertex up, Cross = edge up, Triad = face up)
+- **Methods**: Chords, Arcs, Mexican and Kruschke ported from the [Acidome](https://acidome.com/lab/calc/) calculator, plus the flat grid used by `dome_generator.py`
+- **Cut**: Acidome's whole-row fractions (7/12, 5/8, 3/4, …) for the Acidome methods, or any fraction for the flat grid, with optional base flattening so the bottom ring sits on one plane
+- **Struts**: types grouped within a tolerance you set, with chord factors, counts and hub valences; hover a strut or table row to highlight its type
+- **Export**: OBJ (Z-up like the Python tools, or Y-up, optionally with struts as `l` lines) and a cut-list CSV
+- **Sharing**: every setting lives in the URL hash, so "Copy link" reproduces the exact model
+- **Acidome link**: shows the matching Acidome URL and opens it online or in a local offline copy (Acidome only builds spheres, so eggs and ellipsoids open as the nearest sphere)
+
+The Acidome methods reproduce acidome.com's own geometry: hub, strut and panel counts, every strut length (to 6 decimals) and the dome height match across Chords, Arcs, Mexican and Kruschke, both bases, all three orientations, and flattened and unflattened cuts. That includes one Acidome quirk: its Mexican method never pushes hubs back onto the sphere, so they sit up to about 0.01% outside it. With the flat-grid method in its native orientation (Cross for the icosahedron, Pentad for the octahedron), meshes match `dome_generator.py` and `EllipsoidalGeodesic` face for face. The viewer drops the unused below-the-cut vertices that `dome_generator.py` leaves in its OBJ files.
+
+To use the offline Acidome button, download the calculator from acidome.com ("Acidome offline ⤓") and save it as `vendor/acidome/acidome-offline.html`. `vendor/` is git-ignored because Acidome's code isn't under a standard open-source license.
+
 ## Installation
 
 No installation required! Just Python 3.6+

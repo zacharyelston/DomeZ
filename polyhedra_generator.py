@@ -113,25 +113,20 @@ class PolyhedraGenerator:
         # Normalize to unit sphere
         vertices = [v.normalize() for v in vertices]
         
-        # 12 pentagonal faces (split into triangles from center)
+        # 12 pentagonal faces, each listed counter-clockwise as seen from
+        # outside so the face normals point outward
+        pentagons = [
+            (0, 8, 4, 14, 12), (0, 12, 2, 17, 16), (0, 16, 1, 9, 8),
+            (1, 13, 15, 5, 9), (1, 16, 17, 3, 13), (2, 10, 11, 3, 17),
+            (2, 12, 14, 6, 10), (3, 11, 7, 15, 13), (4, 8, 9, 5, 18),
+            (4, 18, 19, 6, 14), (5, 15, 7, 19, 18), (6, 19, 7, 11, 10),
+        ]
+
+        # Split each pentagon into 3 triangles fanning out from its first vertex
         faces = [
-            # Each pentagon split into 3 triangles
-            (0, 8, 9), (0, 9, 1), (0, 1, 16),
-            (0, 16, 17), (0, 17, 2), (0, 2, 12),
-            (0, 12, 8),
-            (8, 12, 4), (8, 4, 14), (8, 14, 9),
-            (9, 14, 5), (9, 5, 15), (9, 15, 1),
-            (1, 15, 13), (1, 13, 3), (1, 3, 16),
-            (16, 3, 17), (16, 17, 2),
-            (2, 17, 10), (2, 10, 6), (2, 6, 12),
-            (12, 6, 14), (12, 14, 4),
-            (4, 14, 18), (4, 18, 19), (4, 19, 6),
-            (6, 19, 7), (6, 7, 10),
-            (10, 7, 11), (10, 11, 3), (10, 3, 17),
-            (3, 11, 13),
-            (13, 11, 7), (13, 7, 19), (13, 19, 15),
-            (15, 19, 18), (15, 18, 5),
-            (5, 18, 14),
+            (p[0], p[i], p[i + 1])
+            for p in pentagons
+            for i in range(1, 4)
         ]
         
         return vertices, faces

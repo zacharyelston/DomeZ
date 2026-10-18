@@ -208,8 +208,9 @@
   svg.board text { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #111; }
   svg.board .mark.inner { fill: #555; }
   svg.board .lab { fill: #777; }
-  svg.board .blue { fill: #2457c5; font-size: 14px; }
-  svg.board .red { fill: #c0362c; font-size: 14px; }
+  svg.board .blue { fill: #2457c5; font-size: 13px; }
+  svg.board .red { fill: #c0362c; font-size: 13px; }
+  svg.board .arc { fill: none; stroke: #999; stroke-width: 1; }
   svg.board .face { fill: #333; font-size: 12px; }
   svg.board .spoke { stroke: #aaa; stroke-width: 1.2; }
   svg.board .hubc { fill: #fff; stroke: #999; stroke-width: 1.2; }
@@ -775,8 +776,8 @@ function effectivePartial(p) {
 
 /* ---------- Pipeline ---------- */
 
-/** Each edge once, in the order the mesh builder creates it and with its direction, as Acidome
-    stores its lines. Acidome draws a board with its line's first hub on the left. */
+/** Each edge once, in the order the mesh builder creates it, as Acidome stores its lines. Its first
+    line of each board type is the one Acidome draws. */
 function lineOrderOf(tris, style) {
   const seen = new Set(), order = [];
   for (const [a, b, c] of tris) {
@@ -1048,8 +1049,9 @@ function buildJointLumber(full, p) {
   const sigma = p.frame === 'joint-ccw' ? -1 : 1;
   const key = (a, b) => (a < b ? a * n + b : b * n + a);
 
-  // edges in Acidome's line order, with the third vertex of each face on them
-  const edges = full.lineOrder.map(([a, b]) => ({ a, b, thirds: [], faces: [] }));
+  // edges in Acidome's line order, with the third vertex of each face on them. Acidome takes a board's
+  // two ends in the order of its hubs' points, so a board runs from its lower-numbered hub (drawn left).
+  const edges = full.lineOrder.map(([a, b]) => ({ a: Math.min(a, b), b: Math.max(a, b), thirds: [], faces: [] }));
   const edgeAt = new Map(edges.map((e, i) => [key(e.a, e.b), i]));
   full.tris.forEach(([x, y, z], f) => {
     for (const [u, v, o] of [[x, y, z], [y, z, x], [z, x, y]]) { const e = edges[edgeAt.get(key(u, v))]; e.thirds.push(o); e.faces.push(f); }
@@ -1116,13 +1118,15 @@ function buildJointLumber(full, p) {
     const mid = len(sub(tails[0].middle, tails[1].middle));
     const extra = tails.reduce((s, tl) => s + Math.abs(tl.bevelSides[0]) + Math.abs(tl.bevelInner), 0);
     boards.push({ edge: idx, a: e.a, b: e.b, tails, mid, maxL: mid + extra, minL: mid - extra, n: e.n, lineNormal: e.lineNormal,
-                  faces: e.faces, thirds: e.thirds,
+                  faces: e.faces, thirds: e.thirds, selvage: e.faces.filter((f) => full.keep[f]).length === 1,
                   key: 'Length' + Math.round((mid + extra) * 1000) + ' ' + strs.slice().sort().join(' ') });
   });
 
   // board types: A = most numerous, then longer, then key descending
+  // Acidome lists boards on the cut edge (one live face) last, so a type's first board, the one it
+  // draws and compares lengths by, is an inner board whenever the type has one
   const byKey = new Map();
-  for (const bd of boards) { if (!byKey.has(bd.key)) byKey.set(bd.key, []); byKey.get(bd.key).push(bd); }
+  for (const bd of [...boards].sort((p, q) => p.selvage - q.selvage)) { if (!byKey.has(bd.key)) byKey.set(bd.key, []); byKey.get(bd.key).push(bd); }
   const boardTypes = acidomeNumbering(byKey, (bd) => bd.maxL).map(([k, members], i) => ({ index: i, label: typeLabel(i), key: k, members, rep: members[0] }));
   for (const bt of boardTypes) for (const bd of bt.members) bd.type = bt;
 
@@ -1211,6 +1215,10 @@ function boardDrawing(bd, L) {
       return f;
     };
     let blue = null, red = null;
+    if (tl.bevelZero) {                                          // square across the outer face: one mark per face
+      outerAnchor = mark(oc[0], outerAnchor, 'top', 'outer');
+      innerAnchor = mark(ic[0], innerAnchor, 'bottom', 'inner');
+    }
     for (let i = 0; i < 2; i++) {
       const top = turn !== Boolean(i), y = top ? 0 : h;
       const ob = [oc[0] + TURN * s[i], y], ib = [ic[0] + TURN * s[i], y];
@@ -1218,8 +1226,8 @@ function boardDrawing(bd, L) {
         outerAnchor = mark(ob[0], outerAnchor, top ? 'top' : 'bottom', 'outer');
         innerAnchor = mark(ib[0], innerAnchor, top ? 'top' : 'bottom', 'inner');
       }
-      out.cuts.push({ from: oc, to: ob, hidden: false });
-      out.cuts.push({ from: ic, to: ib, hidden: (ic[0] > oc[0]) !== turn });
+      out.cuts.push({ from: oc, to: ob, hidden: false, side: turn ? 'right' : 'left' });
+      out.cuts.push({ from: ic, to: ib, hidden: (ic[0] > oc[0]) !== turn, side: turn ? 'right' : 'left' });
       if (top) out.edges.top.push(ob[0]); else out.edges.bottom.push(ob[0]);
       if ((!tl.bevelZero && tl.bevelStraight && (turn !== (ob[0] > oc[0]))) || (tl.bevelZero && i === 0)) {
         const byOuter = [ob[0] - oc[0], ob[1] - oc[1], 0], toInner = [ic[0] - oc[0], ic[1] - oc[1], depth];
@@ -1230,7 +1238,7 @@ function boardDrawing(bd, L) {
         const sq = [ob[0], oc[1]];
         const AB = Math.hypot(ob[0] - oc[0], ob[1] - oc[1]), BC = Math.hypot(sq[0] - ob[0], sq[1] - ob[1]), CA = Math.hypot(oc[0] - sq[0], oc[1] - sq[1]);
         red = Math.round(deg(Math.acos(Math.max(-1, Math.min(1, (AB * AB + BC * BC - CA * CA) / (2 * AB * BC))))) * 5) / 5;
-        out.red.push({ value: red, at: ob, from: oc, side: turn ? 'right' : 'left' });
+        if (red) out.red.push({ value: red, at: ob, from: oc, side: turn ? 'right' : 'left' });
       }
     }
     out.hubs.push({ at: oc, no: L.hubNo[tl.hub], spokes: L.liveValence[tl.hub] || 6, side: turn ? 'right' : 'left' });
@@ -1243,67 +1251,128 @@ function boardDrawing(bd, L) {
     });
   });
   // black ∟: angle between each adjacent face's cover plane and the board's radial plane
-  out.faceAngles = bd.faces.map((f, k) => {
+  // (only faces that are built: a board on the cut edge has one)
+  out.faceAngles = bd.faces.flatMap((f, k) => {
+    if (!L.keep[f]) return [];
     const re = L.reals[f], nf = cross(sub(re[0], re[1]), sub(re[2], re[1]));
     let a = Math.round(deg(angleBetween(nf, bd.lineNormal)) / 0.1) / 10;
     if (a > 90) a = Math.round((180 - a) * 10) / 10;
-    return { value: a, edge: dot(L.P[bd.thirds[k]], bd.lineNormal) <= 0 ? 'bottom' : 'top' };
+    return [{ value: a, edge: dot(L.P[bd.thirds[k]], bd.lineNormal) <= 0 ? 'bottom' : 'top' }];
   });
+  // how far each end's cuts reach into the board, from its own end (the drawing keeps these at true scale)
+  const xsOf = (side) => [...out.cuts.filter((c) => c.side === side).flatMap((c) => [c.from[0], c.to[0]]),
+                          ...out.marks.filter((m) => m.side === side).map((m) => m.x)];
+  out.extent = [Math.max(...xsOf('left')), out.length - Math.min(...xsOf('right'))];
+  // lengths along the four long edges, from the labels, so every number agrees with the drawing
+  const lab = (edge, kind, side) => out.marks.find((m) => m.edge === edge && m.kind === kind && m.side === side)
+    || out.marks.find((m) => m.kind === kind && m.side === side);            // a square end has one mark per face
+  out.edgeLengths = [];
+  for (const kind of ['outer', 'inner']) for (const edge of ['top', 'bottom']) {
+    const a = lab(edge, kind, 'left'), b = lab(edge, kind, 'right');
+    if (a && b) out.edgeLengths.push({ kind, edge, mm: b.label - a.label });
+  }
+  out.overall = out.marks.length ? Math.max(...out.marks.map((m) => m.label)) : Math.round(bd.maxL * 1000);
+  out.shortest = out.edgeLengths.length ? Math.min(...out.edgeLengths.map((e) => e.mm)) : Math.round(bd.minL * 1000);
   return out;
 }
 
-/** The drawing as SVG. The middle of a long board is shortened so both ends show at true angles. */
+/** A board type's overall length in mm, as its drawing labels its furthest corner. */
+function overallOf(bt, L) {
+  if (bt.overall === undefined) bt.overall = boardDrawing(bt.rep, L).overall;
+  return bt.overall;
+}
+
+/** The drawing as SVG, at one scale both ways. As in Acidome, each end keeps everything its cut
+    touches at true scale; a long board's middle is shortened between them, and longer board types
+    are drawn longer. */
 function boardSVG(bd, L, color) {
   const D = boardDrawing(bd, L);
-  const W = 720, H = 210, mx = 46, my = 34;
+  const H = 210, mx = 46, my = 34, gapPx = 34, baseWidth = 720;
   const k = (H - 2 * my) / D.h;                                 // px per metre, same both ways
-  const gapPx = 34, endLen = Math.max(0.03, (W - 2 * mx - gapPx) / 2 / k);
-  const squeeze = D.length > 2 * endLen;
+  const pad = 44 / k;                                           // room past an end's last mark for its label
+  const lens = L.boardTypes.map((bt) => bt.rep.maxL), lo = Math.min(...lens), hi = Math.max(...lens);
+  const share = hi - lo > 1e-9 ? 0.6 + 0.4 * (bd.maxL - lo) / (hi - lo) : 1;
+  const budget = (baseWidth - 2 * mx - gapPx) / k * share;     // metres of board shown
+  let left = D.extent[0] + pad, right = D.extent[1] + pad;
+  const slack = budget - left - right;
+  if (slack > 0) { left += slack / 2; right += slack / 2; }
+  const squeeze = left + right < D.length;
   const X = (x) => {
-    if (!squeeze) return mx + x * k;
-    if (x <= endLen) return mx + x * k;
-    if (x >= D.length - endLen) return mx + endLen * k + gapPx + (x - (D.length - endLen)) * k;
-    return mx + endLen * k + (x - endLen) / (D.length - 2 * endLen) * gapPx;
+    if (!squeeze || x <= left) return mx + x * k;
+    if (x >= D.length - right) return mx + left * k + gapPx + (x - (D.length - right)) * k;
+    return mx + left * k + (x - left) / (D.length - left - right) * gapPx;
   };
   const Y = (y) => my + y * k;
-  const width = squeeze ? 2 * mx + 2 * endLen * k + gapPx : 2 * mx + D.length * k;
+  const width = squeeze ? 2 * mx + (left + right) * k + gapPx : 2 * mx + D.length * k;
   const parts = [];
-  const line = (x1, y1, x2, y2, attrs) => parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" ${attrs}/>`);
-  const text = (x, y, s, attrs) => parts.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" ${attrs}>${s}</text>`);
+  const f1 = (v) => v.toFixed(1);
+  const line = (x1, y1, x2, y2, attrs) => parts.push(`<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" ${attrs}/>`);
+  const text = (x, y, s, attrs) => parts.push(`<text x="${f1(x)}" y="${f1(y)}" ${attrs}>${s}</text>`);
   // reference lines and thickness labels
   line(mx - 14, Y(0), width - 6, Y(0), 'class="ref"');
   line(mx - 14, Y(D.h), width - 6, Y(D.h), 'class="ref"');
   text(4, Y(0) + 4, '0', 'class="lab"');
   text(4, Y(D.h) + 4, String(Math.round(D.h * 1000)), 'class="lab"');
-  // division lines and marks
+  // division lines and marks: at each end the mark nearer the end is labelled on its outside
+  const CHAR = 7.9;                                             // px per character of the 13px monospace labels
+  const taken = { top: [], bottom: [] };                        // label spans along each edge's label row
   for (const m of D.marks) {
     line(X(m.x), my - 22, X(m.x), Y(D.h) + 22, 'class="ref"');
-    const anchor = (m.kind === 'outer') === (m.side === 'left') ? 'end' : 'start';
-    const dx = anchor === 'end' ? -3 : 3;
-    text(X(m.x) + dx, m.edge === 'top' ? my - 8 : Y(D.h) + 18, String(m.label), `class="mark${m.kind === 'inner' ? ' inner' : ''}" text-anchor="${anchor}"`);
+    const pair = D.marks.filter((o) => o.edge === m.edge && o.side === m.side);
+    const outermost = m.side === 'left' ? m.x <= Math.min(...pair.map((o) => o.x)) : m.x >= Math.max(...pair.map((o) => o.x));
+    const anchor = outermost === (m.side === 'left') ? 'end' : 'start';
+    const x0 = X(m.x) + (anchor === 'end' ? -3 : 3), w = String(m.label).length * CHAR;
+    taken[m.edge].push(anchor === 'end' ? [x0 - w, x0] : [x0, x0 + w]);
+    text(x0, m.edge === 'top' ? my - 8 : Y(D.h) + 18, String(m.label), `class="mark${m.kind === 'inner' ? ' inner' : ''}" text-anchor="${anchor}"`);
   }
   // long edges, broken in the shortened middle
   const edge = (xs, y) => {
     const [x1, x2] = [Math.min(...xs), Math.max(...xs)];
     if (squeeze) {
-      line(X(x1), Y(y), X(endLen), Y(y), 'class="wood"');
-      line(X(D.length - endLen), Y(y), X(x2), Y(y), 'class="wood"');
-      line(X(endLen), Y(y), X(D.length - endLen), Y(y), 'class="gap"');
+      line(X(x1), Y(y), X(left), Y(y), 'class="wood"');
+      line(X(D.length - right), Y(y), X(x2), Y(y), 'class="wood"');
+      line(X(left), Y(y), X(D.length - right), Y(y), 'class="gap"');
     } else line(X(x1), Y(y), X(x2), Y(y), 'class="wood"');
   };
   edge(D.edges.top, 0);
   edge(D.edges.bottom, D.h);
   // end cuts: solid on the outer face, dashed where the inner face's cut is hidden behind it
   for (const c of D.cuts) line(X(c.from[0]), Y(c.from[1]), X(c.to[0]), Y(c.to[1]), c.hidden ? 'class="cut hidden"' : 'class="cut"');
-  // angles
+  // blue ∟: along its cut line, on the waste side, toward the board's edge
   for (const a of D.blue) {
-    const q = a.side === 'left' ? 0.618 : 0.382;
-    const px = X(a.from[0] + (a.to[0] - a.from[0]) * q), py = Y(a.from[1] + (a.to[1] - a.from[1]) * q);
-    text(px + (a.side === 'left' ? -8 : 8), py + 4, `∟${a.value}°`, `class="blue" text-anchor="${a.side === 'left' ? 'end' : 'start'}"`);
+    const ax = X(a.from[0]), ay = Y(a.from[1]), bx = X(a.to[0]), by = Y(a.to[1]);
+    const l = Math.hypot(bx - ax, by - ay) || 1;
+    let nx = (ay - by) / l, ny = (bx - ax) / l;
+    if ((a.side === 'left') !== (nx < 0)) { nx = -nx; ny = -ny; }
+    // as near 0.62 of its half of the cut as fits (Acidome's spot), with the label inside the board's band
+    // and clear of the hub's spokes (22 px); move it further out from the cut only when it must
+    const half = `∟${a.value}°`.length * CHAR * 0.55, tall = 7, ux = (bx - ax) / l, uy = (by - ay) / l;
+    const fits = (along, off) => {
+      const cy = ay + uy * along + ny * off, reach = Math.abs(uy) * half + Math.abs(ny) * tall;
+      const hub = Math.hypot(Math.max(0, along - half), Math.max(0, off - tall));
+      return cy - reach >= Y(0) + 1 && cy + reach <= Y(D.h) - 1 && hub >= 23;
+    };
+    const alongs = [];
+    for (let s = 0; s <= l + half; s += 2) alongs.push(s);
+    alongs.sort((p, q) => Math.abs(p - 0.62 * l) - Math.abs(q - 0.62 * l));
+    let along = 0.62 * l, off = 30;
+    search: for (const o of [10, 16, 22, 28, 34]) for (const s of alongs) if (fits(s, o)) { along = s; off = o; break search; }
+    const px = ax + ux * along + nx * off, py = ay + uy * along + ny * off;
+    let deg = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+    if (deg > 90) deg -= 180; else if (deg <= -90) deg += 180;
+    text(px, py, `∟${a.value}°`, `class="blue" text-anchor="middle" dominant-baseline="middle" transform="rotate(${f1(deg)} ${f1(px)} ${f1(py)})"`);
   }
+  // red: the cut's angle from square on the outer face, an arc in the corner it makes with the edge
   for (const a of D.red) {
-    const px = X(a.at[0]), py = Y(a.at[1]);
-    text(px + (a.side === 'left' ? 10 : -10), py + (a.at[1] === 0 ? 16 : -8), `${a.value}°`, `class="red" text-anchor="${a.side === 'left' ? 'start' : 'end'}"`);
+    const bx = X(a.at[0]), by = Y(a.at[1]), R = 24;
+    const u1 = [X(a.from[0]) - bx, Y(a.from[1]) - by], u2 = [0, Y(a.from[1]) - by];
+    const n1 = Math.hypot(...u1) || 1, n2 = Math.hypot(...u2) || 1;
+    const e1 = [u1[0] / n1, u1[1] / n1], e2 = [u2[0] / n2, u2[1] / n2];
+    const sweep = e1[0] * e2[1] - e1[1] * e2[0] > 0 ? 1 : 0;
+    parts.push(`<path class="arc" d="M${f1(bx + R * e1[0])} ${f1(by + R * e1[1])} A${R} ${R} 0 0 ${sweep} ${f1(bx + R * e2[0])} ${f1(by + R * e2[1])}"/>`);
+    const bis = [e1[0] + e2[0], e1[1] + e2[1]], nb = Math.hypot(...bis) || 1;
+    const px = bx + bis[0] / nb * (R + 6), py = by + bis[1] / nb * (R + 6);
+    text(px, py, `${a.value}°`, `class="red" text-anchor="${a.side === 'left' ? 'end' : 'start'}" dominant-baseline="middle"`);
   }
   // hub circles, with one spoke per board at that hub
   for (const hb of D.hubs) {
@@ -1312,12 +1381,21 @@ function boardSVG(bd, L, color) {
       const ang = (i + 0.3) * 2 * Math.PI / hb.spokes;
       line(cx + r * Math.cos(ang), cy + r * Math.sin(ang), cx + 2 * r * Math.cos(ang), cy + 2 * r * Math.sin(ang), 'class="spoke"');
     }
-    parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" class="hubc"/>`);
+    parts.push(`<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${r}" class="hubc"/>`);
     text(cx, cy + 4, String(hb.no), 'class="hubn" text-anchor="middle"');
   }
-  // panel angles along the edges, in the middle where there are no marks
-  const midX = squeeze ? (X(endLen) + X(D.length - endLen)) / 2 : X(D.length / 2);
-  for (const fa of D.faceAngles) text(midX, fa.edge === 'top' ? my - 8 : Y(D.h) + 18, `∟${fa.value}°`, 'class="face" text-anchor="middle"');
+  // panel angles along the edges, in the widest stretch of their label row that no mark label uses
+  const freeMiddle = (spans) => {
+    let best = null, from = mx;
+    for (const [a, b] of [...spans, [width - mx, width - mx]].sort((p, q) => p[0] - q[0])) {
+      if (!best || a - from > best[1] - best[0]) best = [from, a];
+      from = Math.max(from, b);
+    }
+    return (best[0] + best[1]) / 2;
+  };
+  for (const fa of D.faceAngles) {
+    text(freeMiddle(taken[fa.edge]), fa.edge === 'top' ? my - 8 : Y(D.h) + 18, `∟${fa.value}°`, 'class="face" text-anchor="middle"');
+  }
   return `<svg class="board" viewBox="0 0 ${width.toFixed(0)} ${H}" width="${width.toFixed(0)}" style="--c:${color}" role="img"
     aria-label="Board ${bd.type.label} cut drawing">${parts.join('')}</svg>`;
 }
@@ -1766,7 +1844,7 @@ canvas.addEventListener('pointermove', (e) => {
     const bh = ray.intersectObject(boardMesh, false)[0];
     if (bh) {
       const L = current.lumber, bd = L.boards[Math.floor(bh.faceIndex / BOARD_TRIS)], bt = bd.type;
-      tip.textContent = `Board ${bt.label} · ${Math.round(bd.maxL * 1000)} mm overall · ${bt.members.length} of this type · hubs ${L.hubNo[bd.a]}–${L.hubNo[bd.b]}`;
+      tip.textContent = `Board ${bt.label} · ${overallOf(bt, L)} mm overall · ${bt.members.length} of this type · hubs ${L.hubNo[bd.a]}–${L.hubNo[bd.b]}`;
       tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
       tip.hidden = false;
       if (!pinned && highlight !== bt.index) { highlight = bt.index; colorStruts(); }
@@ -1820,7 +1898,7 @@ function updateBoardPanels(M) {
   $('strutRows').innerHTML = L.boardTypes.map((bt) => `
     <tr data-g="${bt.index}">
       <td><span class="sw" style="background:${productColor(bt.index)}"></span>${bt.label}</td>
-      <td class="n">${Math.round(bt.rep.maxL * 1000)} mm</td>
+      <td class="n">${overallOf(bt, L)} mm</td>
       <td class="n">${L.hubNo[bt.rep.a]}–${L.hubNo[bt.rep.b]}</td>
       <td class="n">${bt.members.length}</td>
     </tr>`).join('');
@@ -2028,9 +2106,9 @@ function lumberSheetHTML() {
     return `<tr>
       <td class="big"><span class="sw" style="background:${productColor(bt.index)}"></span>${bt.label}</td>
       <td class="n big">${bt.members.length}</td>
-      <td class="n big">${Math.round(bt.rep.maxL * 1000)}</td>
-      <td class="n">${inchText(bt.rep.maxL)}</td>
-      <td class="n">${Math.round(bt.rep.minL * 1000)}</td>
+      <td class="n big">${D.overall}</td>
+      <td class="n">${inchText(D.overall / 1000)}</td>
+      <td class="n">${D.shortest}</td>
       <td class="n">${D.saw.map((sw) => sw.hub).join('–')}</td>
       <td class="n">${sawText(D.saw[0])}</td>
       <td class="n">${sawText(D.saw[1])}</td></tr>`;
@@ -2038,7 +2116,7 @@ function lumberSheetHTML() {
   const drawings = L.boardTypes.map((bt) => `
     <div class="drawing">
       <div class="drawing-head"><span class="dot" style="background:${productColor(bt.index)}">${bt.label}</span>
-        <b>${bt.members.length} pcs</b> · ${Math.round(bt.rep.maxL * 1000)} mm overall (${inchText(bt.rep.maxL)}) · hubs ${L.hubNo[bt.rep.a]}–${L.hubNo[bt.rep.b]}</div>
+        <b>${bt.members.length} pcs</b> · ${overallOf(bt, L)} mm overall (${inchText(overallOf(bt, L) / 1000)}) · hubs ${L.hubNo[bt.rep.a]}–${L.hubNo[bt.rep.b]}</div>
       ${boardSVG(bt.rep, L, productColor(bt.index))}
     </div>`).join('');
   const hubRows = L.hubTypes.map((ht) => `<tr>
@@ -2070,10 +2148,10 @@ function lumberSheetHTML() {
       <thead><tr><th>Type</th><th class="n">Qty</th><th class="n">Overall, mm</th><th class="n">Inches</th><th class="n">Shortest edge, mm</th><th class="n">Hubs</th><th class="n">Left end saw</th><th class="n">Right end saw</th></tr></thead>
       <tbody>${boardRows}</tbody>
     </table></div>
-    <p class="note">Overall is the board's length from its furthest corner to its furthest corner, the length to buy and rough-cut. Saw settings are for the outer face lying on the saw table: miter is the cut's angle from square across that face, bevel is the blade's tilt. The drawings below show which way each cut leans.</p>
+    <p class="note">Overall is the board's length from its furthest corner to its furthest corner, the length to buy and rough-cut. Shortest edge is the shortest of its four long edges. Both are read off the drawing's marks, so they agree with it. Saw settings are for the outer face lying on the saw table: miter is the cut's angle from square across that face, bevel is the blade's tilt. The drawings below show which way each cut leans.</p>
 
     <h2>Cut drawings</h2>
-    <p class="note">Each drawing is a board's outer face seen from outside the dome, its first hub on the left. Numbers along the top and bottom edges are millimetres from the left end: where the cut crosses that edge on the outer face, then on the inner face (the dashed line is the cut on the hidden inner face). <span class="blue-t">Blue ∟</span> is the angle inside the wood between the outer face and the cut (blade bevel = 90° − blue). <span class="red-t">Red</span> is the cut's angle from square on the outer face (the miter). Circles give the hub type at each end, with one spoke per board meeting there. Black ∟ is the angle between each neighbouring panel and the board's side. Long boards are drawn with their middle shortened.</p>
+    <p class="note">Each drawing is a board's outer face seen from outside the dome, its first hub on the left. Numbers along the top and bottom edges are millimetres from the left end: where the cut crosses that edge on the outer face, then on the inner face (the dashed line is the cut on the hidden inner face). <span class="blue-t">Blue ∟</span> is the angle inside the wood between the outer face and the cut (blade bevel = 90° − blue). <span class="red-t">Red</span> is the cut's angle from square on the outer face (the miter). Circles give the hub type at each end, with one spoke per board meeting there. Black ∟ is the angle between each neighbouring panel and the board's side (a board on the cut edge has one). Each end is drawn to scale, as far in as its cut reaches; a long board's middle is shortened between the ends. Boards are drawn the same way round as in Acidome.</p>
     ${drawings}
 
     <h2>Hubs</h2>
@@ -2159,7 +2237,7 @@ function lumberSheetRows() {
     const D = boardDrawing(bt.rep, L);
     const marks = (edge) => D.marks.filter((m) => m.edge === edge).sort((a, b) => a.x - b.x).map((m) => m.label).join(' ');
     const sw = D.saw.map((x) => x.outerDown || { miter: '', bevel: '' });
-    rows.push([bt.label, bt.members.length, Math.round(bt.rep.maxL * 1000), inchText(bt.rep.maxL), Math.round(bt.rep.minL * 1000),
+    rows.push([bt.label, bt.members.length, D.overall, inchText(D.overall / 1000), D.shortest,
       D.saw.map((x) => x.hub).join('–'), sw[0].miter, sw[0].bevel, sw[1].miter, sw[1].bevel, marks('top'), marks('bottom')]);
   }
   rows.push([], ['Hubs'], ['Type', 'Quantity', 'Boards', 'Board types around (clockwise from outside)']);

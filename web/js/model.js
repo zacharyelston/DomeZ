@@ -1,4 +1,4 @@
-/* DomeZ · model: A design (the viewer's state) to its mesh, its strut, hub and panel types, and its lumber. */
+/* DomeZ · model: A design (the viewer's state) to its mesh, its strut, hub and panel types, and its lumber or gridshell. */
 (function (DomeZ) {
 'use strict';
 const { sub, dot, cross, len } = DomeZ.vec;
@@ -8,6 +8,7 @@ const { parsePartial, effectivePartial, pythonCut, acSliceByFraction, acSliceByA
 const { shapeTransform } = DomeZ.shape;
 const { groupStruts, typeHubsAndPanels } = DomeZ.types;
 const { buildJointLumber } = DomeZ.lumber;
+const { buildGridshell } = DomeZ.gridshell;
 
 /** The whole unit-sphere mesh (z-up, outward winding) before the cut, with the cut's keep flags and
     Acidome's line order. Acidome builds boards on the whole mesh and only then drops cut faces. */
@@ -67,7 +68,8 @@ function buildModel(p) {
   }
   return { pts, tris, edges, lengths, groups, groupOf, hubs, min, max, area, volume: Math.abs(vol),
            totalLength: lengths.reduce((s, l) => s + l, 0), ...typeHubsAndPanels(pts, tris, edges, groupOf, groups),
-           full, lumber: p.frame === 'struts' ? null : buildJointLumber(full, p) };
+           full, lumber: p.frame === 'joint' || p.frame === 'joint-ccw' ? buildJointLumber(full, p) : null,
+           gridshell: p.frame === 'gridshell' ? buildGridshell(p) : null };
 }
 
 DomeZ.model = {

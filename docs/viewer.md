@@ -35,11 +35,27 @@ Every shape is built on a unit sphere and then stretched, so the cut and the hub
 
 ### Frame
 
-- **Connection**: **Joint boards** (the default), clockwise or anticlockwise, or **Struts only** for hub-to-hub struts.
+- **Connection**: **Joint boards** (the default), clockwise or anticlockwise, **Struts only** for hub-to-hub struts, or **Gridshell** (a prototype, below).
 
   Joint is Acidome's hubless timber frame. Every board is a straight piece of lumber, width along the radius and thickness across, and the boards lock around each hub as a pinwheel. Each end is cut flat against the side of the next board clockwise (or anticlockwise), seen from outside. The construction is ported from Acidome and reproduces its boards, typing and cut drawings exactly on spheres. On ellipsoids and eggs every board still aims at the dome's centre, and the results match Acidome Height+.
 - **Boards (mm)**: width × thickness, e.g. 120 × 40, or 89 × 38 for a 2×4 on edge.
 - **Panel gap (mm)**: the gap a cast panel leaves to the boards around it, for the panel sizes on the cut sheet.
+
+#### Gridshell (prototype)
+
+A timber gridshell is a lattice of long, thin laths bent elastically into shape and bolted where they cross, like Frei Otto's Mannheim Multihalle or the Downland Gridshell. Here each lath lies flat on the skin and follows a geodesic line, the straightest path on the surface. Along a geodesic a flat lath only bends the easy way, about its thin side, never edgewise.
+
+- **How the laths run:**
+  - The shape must be round in plan: a sphere, an egg, or an ellipsoid with equal X and Y radii. On such a surface every lath that leaves the base ring at the same angle has the same shape (Clairaut's rule: distance from the axis × sine of the angle to the vertical stays constant).
+  - Family A turns one way and family B mirrors it. A laths lie in the outer layer and B laths in the inner layer, and they are bolted at every crossing.
+  - Each lath climbs to a crown ring, where it runs level. The ring's radius is the base radius × sine of the lath angle, so steeper laths leave a smaller opening at the top.
+- **Laths:** the number per family, and their angle from the vertical at the base.
+- **Lath (mm):** width × ply thickness × plies. Plies are stacked and bolted, not glued, so each bends on its own thickness.
+- **Timber:** bending stiffness E (GPa) and the allowable bending stress (MPa). The bend check compares E × ply thickness ÷ (2 × tightest bend radius) with that limit, and gives the thickest safe ply.
+
+The 3D view shows the laths as ribbons on their two layers, a bolt at each crossing, and the base and crown rings. The cut sheet becomes a gridshell sheet. Every lath is the same, so it gives one table of crossings: distance along the lath, height, the angle between the laths, and the bend radius there. One drilling template therefore serves every lath, turned over for family B.
+
+Not yet covered: covering the opening above the crown ring, twist and buckling checks, loads, and laths that start at different angles.
 
 ### Display
 
@@ -101,13 +117,17 @@ Only values that differ from the defaults are written to the hash.
 | `partial` | `7/12` | a fraction (`3/4`) or decimal |
 | `flat` | `0` | `1` flattens the base ring |
 | `tol` | `1` | strut grouping tolerance (mm) |
-| `frame` | `joint` | `joint`, `joint-ccw` (anticlockwise) or `struts` |
+| `frame` | `joint` | `joint`, `joint-ccw` (anticlockwise), `struts` or `gridshell` |
 | `beamW`, `beamT` | `120`, `40` | board width (along the radius) and thickness (mm) |
 | `gap` | `0` | panel gap to the boards (mm), for panel sizes |
 | `panels` | `glass` | `off`, `glass` or `solid` |
 | `showStruts`, `showHubs`, `colorTypes`, `spin` | `1`, `1`, `1`, `0` | display toggles |
 | `upAxis` | `z` | OBJ up axis, `z` or `y` |
 | `objLines` | `0` | `1` adds struts as OBJ lines |
+| `lathN` | `20` | gridshell: laths per family (3–120) |
+| `lathAngle` | `30` | gridshell: lath angle from the vertical at the base, degrees (2–80) |
+| `lathW`, `lathT`, `lathPlies` | `50`, `12`, `2` | gridshell: lath width and ply thickness (mm), plies per lath |
+| `lathE`, `lathFb` | `10`, `20` | gridshell: E (GPa) and allowable bending stress (MPa) |
 
 The defaults match Acidome's own default dome (3V Kruschke, 7/12, radius 2.2 m).
 
@@ -131,6 +151,7 @@ The page (`web/index.html`) holds the controls, the Three.js scene and the sheet
 | `drawing.js` | board cut drawings |
 | `openings.js` | panel openings between the boards |
 | `jig.js` | V-cradles, end setups and the top views for the jig sheet |
+| `gridshell.js` | geodesic laths on round shapes, their crossings and the bend check |
 | `format.js` | number, inch, HTML and CSV formatting |
 | `state.js` | defaults and the URL query |
 | `sheets.js` | the cut sheet and jig sheet (HTML and CSV) |

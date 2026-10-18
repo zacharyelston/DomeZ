@@ -150,6 +150,7 @@
   }
   .hud .k { color: var(--muted); }
   .hud .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hud .v.warn { color: var(--warn); }
   .hud .title { grid-column: 1 / -1; font-weight: 650; margin-bottom: 4px; font-size: 13px; }
   .tip {
     position: absolute; pointer-events: none; background: var(--panel); color: var(--ink);
@@ -351,6 +352,7 @@
           <option value="joint">Joint boards, clockwise</option>
           <option value="joint-ccw">Joint boards, anticlockwise</option>
           <option value="struts">Struts only (hub to hub)</option>
+          <option value="gridshell">Gridshell: geodesic laths (prototype)</option>
         </select>
       </div>
       <div class="row two" data-lumber><label>Boards (mm)</label>
@@ -362,6 +364,23 @@
       </div>
       <div class="row two" data-lumber><label for="gap">Panel gap (mm)</label>
         <div class="pair"><input type="number" id="gap" min="0" step="1" title="Gap between a cast panel and the boards around it"><span></span><span></span></div>
+      </div>
+      <div class="row" data-gridshell><label for="lathN">Laths</label><input type="range" id="lathN" min="6" max="60" step="1" aria-label="Laths per family"><output data-for="lathN"></output></div>
+      <div class="row" data-gridshell><label for="lathAngle">Lath angle</label><input type="range" id="lathAngle" min="5" max="75" step="0.5" aria-label="Angle from the vertical at the base"><output data-for="lathAngle"></output></div>
+      <div class="row two" data-gridshell><label>Lath (mm)</label>
+        <div class="pair">
+          <input type="number" id="lathW" min="1" step="1" title="Width, lying on the skin" aria-label="Lath width, mm">
+          <span>×</span>
+          <input type="number" id="lathT" min="0.5" step="0.5" title="Thickness of one ply" aria-label="Ply thickness, mm">
+          <span>×</span>
+          <input type="number" id="lathPlies" min="1" step="1" title="Plies stacked and bolted, not glued" aria-label="Plies">
+        </div>
+      </div>
+      <div class="row two" data-gridshell><label>Timber</label>
+        <div class="pair">
+          <input type="number" id="lathE" min="1" step="0.5" title="Bending stiffness E" aria-label="E, GPa"><span>GPa</span>
+          <input type="number" id="lathFb" min="1" step="1" title="Allowable bending stress, locked in for the life of the shell" aria-label="Allowable bending stress, MPa"><span>MPa</span>
+        </div>
       </div>
       <p class="hint" id="frameHint"></p>
     </section>
@@ -414,6 +433,7 @@
 <script src="js/shape.js"></script>
 <script src="js/types.js"></script>
 <script src="js/lumber.js"></script>
+<script src="js/gridshell.js"></script>
 <script src="js/model.js"></script>
 <script src="js/colors.js"></script>
 <script src="js/drawing.js"></script>
@@ -430,7 +450,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // The geometry, lumber, jig and sheet code lives in js/*.js (window.DomeZ); this script is the page.
 const { SYMMETRY_OPTIONS, PY_NATIVE_SYM, METHODS, effectiveMethod } = DomeZ.geodesic;
 const { parsePartial, fracText, acidomePartials, nearestAcidomePartial, effectivePartial } = DomeZ.cut;
+const { add, mul } = DomeZ.vec;
 const { boardQuads } = DomeZ.lumber;
+const { lathPath, surfacePoint } = DomeZ.gridshell;
 const { buildModel } = DomeZ.model;
 const { productColor, typeColor } = DomeZ.colors;
 const { overallOf } = DomeZ.drawing;
@@ -457,20 +479,24 @@ function syncControls() {
     const [k, v] = el.dataset.show.split('=');
     el.hidden = state[k] !== v;
   });
-  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol']) $(id).value = state[id];
+  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'lathN', 'lathAngle']) $(id).value = state[id];
   $('partial').value = parsePartial(effectivePartial(state)).value;
   document.querySelectorAll('input[type=number][data-for]').forEach((n) => { n.value = state[n.dataset.for]; });
   document.querySelector('output[data-for=freq]').textContent = state.freq + 'V';
   document.querySelector('output[data-for=partial]').textContent = fracText(effectivePartial(state));
   document.querySelector('output[data-for=eggW]').textContent = Math.round(state.eggW * 100) + '%';
   document.querySelector('output[data-for=tol]').textContent = state.tol + ' mm';
+  document.querySelector('output[data-for=lathN]').textContent = state.lathN + ' + ' + state.lathN;
+  document.querySelector('output[data-for=lathAngle]').textContent = state.lathAngle + '°';
+  for (const id of ['lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb']) $(id).value = state[id];
   for (const id of ['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']) $(id).checked = state[id];
   $('method').value = state.method;
   $('sym').innerHTML = SYMMETRY_OPTIONS.map((s) => `<option value="${s.v}">${s.label}${state.method === 'flat' && PY_NATIVE_SYM[state.base] === s.v ? ' (Python)' : ''}</option>`).join('');
   $('sym').value = state.sym;
   $('frame').value = state.frame; $('beamW').value = state.beamW; $('beamT').value = state.beamT; $('gap').value = state.gap; $('upAxis').value = state.upAxis;
   $('frameHint').textContent = FRAMES[state.frame];
-  document.querySelectorAll('[data-lumber]').forEach((el) => { el.hidden = state.frame === 'struts'; });
+  document.querySelectorAll('[data-lumber]').forEach((el) => { el.hidden = state.frame !== 'joint' && state.frame !== 'joint-ccw'; });
+  document.querySelectorAll('[data-gridshell]').forEach((el) => { el.hidden = state.frame !== 'gridshell'; });
   $('tol').closest('.row').hidden = state.frame !== 'struts';
   $('methodHint').textContent = methodHint();
   $('methodHint').className = 'hint' + (methodWarning() ? ' warn' : '');
@@ -504,7 +530,7 @@ function wireControls() {
   document.querySelectorAll('.seg[data-key]').forEach((seg) => seg.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (b) set({ [seg.dataset.key]: b.dataset.v });
   }));
-  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol']) {
+  for (const id of ['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'lathN', 'lathAngle']) {
     $(id).addEventListener('input', () => set({ [id]: parseFloat($(id).value) }));
   }
   $('partial').addEventListener('input', () => {
@@ -518,6 +544,8 @@ function wireControls() {
   for (const id of ['method', 'sym', 'frame', 'upAxis']) $(id).addEventListener('change', () => set({ [id]: $(id).value }));
   for (const id of ['beamW', 'beamT']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
   $('gap').addEventListener('change', () => { const v = parseFloat($('gap').value); if (v >= 0) set({ gap: v }); });
+  for (const id of ['lathW', 'lathT', 'lathE', 'lathFb']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
+  $('lathPlies').addEventListener('change', () => { const v = Math.round(parseFloat($('lathPlies').value)); if (v >= 1) set({ lathPlies: v }); });
   $('resetBtn').addEventListener('click', () => { state = { ...DEFAULTS }; pinned = false; lastSize = null; syncControls(); scheduleRebuild(); });
   $('dlObj').addEventListener('click', downloadObj);
   $('openSheet').addEventListener('click', openSheet);
@@ -576,7 +604,7 @@ const panelMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, flatSh
 const strutMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 });
 const hubMat = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.2 });
 const boardMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.62, metalness: 0.02 });
-let panelMesh = null, strutMesh = null, hubMesh = null, boardMesh = null, grid = null;
+let panelMesh = null, strutMesh = null, hubMesh = null, boardMesh = null, lathMesh = null, nodeMesh = null, ringLines = [], grid = null;
 let current = null;
 let highlight = -1;
 let pinned = false;
@@ -598,6 +626,53 @@ function makeGrid() {
 }
 
 function disposeMesh(m) { if (!m) return; model.remove(m); if (m.geometry !== unitCyl && m.geometry !== unitSphere) m.geometry.dispose(); if (m.dispose) m.dispose(); }
+
+/** The gridshell's laths as flat ribbons on the skin: family A pushed out by half the ply stack and
+    family B in by half, so they meet at the crossings. */
+const lathMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.02 });
+const ringMat = new THREE.LineBasicMaterial({ color: 0x8a6d3b });
+function buildLathMesh(G) {
+  const stack = G.bend.plies * G.bend.ply / 1000, half = G.bend.width / 2000, laths = [];
+  for (const family of ['A', 'B']) for (let i = 0; i < G.N; i++) {
+    const path = lathPath(G, family, i, (family === 'A' ? 1 : -1) * stack / 2).filter((_, k, a) => k % 3 === 0 || k === a.length - 1);
+    laths.push({ family, i, path });
+  }
+  const segs = laths[0].path.length - 1;
+  const pos = new Float32Array(laths.length * segs * 18);
+  let v = 0;
+  for (const { path } of laths) for (let k = 0; k < segs; k++) {
+    const a = path[k], b = path[k + 1];
+    const a1 = add(a.p, mul(a.w, half)), a2 = add(a.p, mul(a.w, -half)), b1 = add(b.p, mul(b.w, half)), b2 = add(b.p, mul(b.w, -half));
+    for (const q of [a1, a2, b2, a1, b2, b1]) { pos.set(q, v * 3); v++; }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(v * 3), 3));
+  g.computeVertexNormals();
+  const mesh = new THREE.Mesh(g, lathMat);
+  mesh.userData = { trisPerLath: segs * 2, laths: laths.map(({ family, i }) => ({ family, i })) };
+  return mesh;
+}
+
+/** A bolt at every crossing, between the two layers. */
+function buildNodeMesh(G, r) {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3().setScalar(r);
+  const mesh = new THREE.InstancedMesh(unitSphere, hubMat, G.N * G.nodes.length);
+  let k = 0;
+  for (let i = 0; i < G.N; i++) for (const n of G.nodes) {
+    m4.compose(v.fromArray(surfacePoint(G.prof, n.t, 2 * Math.PI * i / G.N + n.k * Math.PI / G.N)), q, sc);
+    mesh.setMatrixAt(k++, m4);
+  }
+  return mesh;
+}
+
+function ringLine(radius, z) {
+  const pts = [];
+  for (let k = 0; k < 128; k++) { const a = k / 128 * 2 * Math.PI; pts.push(radius * Math.cos(a), radius * Math.sin(a), z); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
+  return new THREE.LineLoop(g, ringMat);
+}
 
 /** All boards as one mesh: six faces per board, the outer face full colour and the rest shaded. */
 const BOARD_TRIS = 12;
@@ -639,6 +714,15 @@ function rebuildScene() {
 
   disposeMesh(boardMesh); boardMesh = null;
   if (M.lumber) { boardMesh = buildBoardMesh(M.lumber); model.add(boardMesh); }
+  disposeMesh(lathMesh); disposeMesh(nodeMesh); ringLines.forEach(disposeMesh);
+  lathMesh = nodeMesh = null; ringLines = [];
+  if (M.gridshell && M.gridshell.ok) {
+    const G = M.gridshell;
+    lathMesh = buildLathMesh(G); model.add(lathMesh);
+    nodeMesh = buildNodeMesh(G, size * 0.006); model.add(nodeMesh);
+    ringLines = [ringLine(G.rhoBase, G.tBase), ringLine(G.c, G.tCrown)];
+    ringLines.forEach((l) => model.add(l));
+  }
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
   const va = new THREE.Vector3(), vb = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -689,7 +773,23 @@ function colorBoards() {
   document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
 }
 
+/** Family A and B in two colours (or plain wood); hovering a row or a lath picks out its family. */
+function colorLaths() {
+  if (!lathMesh) return;
+  const col = lathMesh.geometry.getAttribute('color'), per = lathMesh.userData.trisPerLath * 3;
+  const dim = new THREE.Color(cssVar('--stage')), c = new THREE.Color();
+  lathMesh.userData.laths.forEach(({ family }, i) => {
+    const g = family === 'A' ? 0 : 1;
+    c.set(state.colorTypes ? typeColor(g, 10) : (g ? '#b8956a' : '#c9a77c'));
+    if (highlight >= 0 && g !== highlight) c.lerp(dim, 0.82);
+    for (let j = 0; j < per; j++) col.setXYZ(i * per + j, c.r, c.g, c.b);
+  });
+  col.needsUpdate = true;
+  document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
+}
+
 function colorStruts() {
+  if (current && current.gridshell) return colorLaths();
   if (current && current.lumber) return colorBoards();
   if (!strutMesh || !current) return;
   const n = current.groups.length;
@@ -714,10 +814,12 @@ function applyVisibility() {
     panelMat.depthWrite = state.panels !== 'glass';
     panelMat.needsUpdate = true;
   }
-  const boards = !!(current && current.lumber);
-  if (strutMesh) strutMesh.visible = state.showStruts && !boards;
-  if (hubMesh) hubMesh.visible = state.showHubs && !boards;
+  const framed = !!(current && (current.lumber || current.gridshell));
+  if (strutMesh) strutMesh.visible = state.showStruts && !framed;
+  if (hubMesh) hubMesh.visible = state.showHubs && !framed;
   if (boardMesh) boardMesh.visible = state.showStruts;
+  if (lathMesh) lathMesh.visible = state.showStruts;
+  if (nodeMesh) nodeMesh.visible = state.showHubs;
   if (controls) controls.autoRotate = state.spin;
 }
 
@@ -770,6 +872,21 @@ canvas.addEventListener('pointermove', (e) => {
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
   const tip = $('tip');
+  if (current.gridshell) {
+    const lh = lathMesh && ray.intersectObject(lathMesh, false)[0];
+    if (lh) {
+      const G = current.gridshell, l = lathMesh.userData.laths[Math.floor(lh.faceIndex / lathMesh.userData.trisPerLath)];
+      tip.textContent = `Lath ${l.family}${l.i + 1} · ${Math.round(G.length * 1000)} mm · ${G.nodes.length - 1} crossings · ${l.family === 'A' ? 'outer' : 'inner'} layer`;
+      tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
+      tip.hidden = false;
+      const g = l.family === 'A' ? 0 : 1;
+      if (!pinned && highlight !== g) { highlight = g; colorStruts(); }
+    } else {
+      tip.hidden = true;
+      if (highlight !== -1 && !pinned) { highlight = -1; colorStruts(); }
+    }
+    return;
+  }
   if (boardMesh && current.lumber) {
     const bh = ray.intersectObject(boardMesh, false)[0];
     if (bh) {
@@ -830,6 +947,45 @@ function updateBoardPanels(M) {
   $('hubLine').textContent = 'Hubs: ' + L.hubTypes.map((ht) => `${ht.hubs.length}× type ${ht.no} (${ht.valence} boards)`).join(' · ');
 }
 
+function updateGridshellPanels(M) {
+  const G = M.gridshell, h = M.max[2] - M.min[2], w = Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]);
+  $('strutTitle').textContent = 'Laths';
+  $('lenHead').textContent = 'Length';
+  $('cfHead').textContent = 'Crossings';
+  if (!G.ok) {
+    $('hud').innerHTML = `<div class="title">${shapeTitle(state)}</div><span class="k">Gridshell</span><span class="v">—</span>`;
+    $('strutRows').innerHTML = '';
+    $('strutHint').className = 'hint warn';
+    $('strutHint').textContent = G.reason;
+    $('hubLine').textContent = '';
+    return;
+  }
+  const B = G.bend, over = B.ratio > 1;
+  $('hud').innerHTML = `
+    <div class="title">${shapeTitle(state)} · gridshell</div>
+    <span class="k">Laths</span><span class="v">${2 * G.N}</span>
+    <span class="k">Lath length</span><span class="v">${fmtM(G.length)}</span>
+    <span class="k">Crossings</span><span class="v">${G.crossings}</span>
+    <span class="k">Crown ring</span><span class="v">Ø ${fmtM(2 * G.c)}</span>
+    <span class="k">Tightest bend</span><span class="v">${fmtM(B.minRadius)}</span>
+    <span class="k">Ply stress</span><span class="v${over ? ' warn' : ''}">${B.maxStress.toFixed(1)} / ${B.allowable} MPa</span>
+    <span class="k opt">Height</span><span class="v opt">${fmtM(h)}</span>
+    <span class="k opt">Width</span><span class="v opt">${fmtM(w)}</span>
+    <span class="k opt">Timber</span><span class="v opt">${(2 * G.N * G.length * B.plies).toFixed(1)} m of ${B.width}×${B.ply}</span>`;
+  $('strutRows').innerHTML = ['A', 'B'].map((f, g) => `
+    <tr data-g="${g}">
+      <td><span class="sw" style="background:${typeColor(g, 10)}"></span>${f} · ${g ? 'inner' : 'outer'}</td>
+      <td class="n">${Math.round(G.length * 1000)} mm</td>
+      <td class="n">${G.nodes.length - 1}</td>
+      <td class="n">${G.N}</td>
+    </tr>`).join('');
+  $('strutHint').className = 'hint' + (over ? ' warn' : '');
+  $('strutHint').textContent = over
+    ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less.`
+    : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m), within the ${B.allowable} MPa allowed. Every lath is the same; B laths are mirror images.`;
+  $('hubLine').textContent = `Base ring Ø ${fmtM(2 * G.rhoBase)} · crown ring Ø ${fmtM(2 * G.c)}, ${fmtM(G.tCrown - G.tBase)} above the base · most twist ${B.maxTwist.toFixed(1)}°/m`;
+}
+
 function updatePanels() {
   const M = current;
   const h = M.max[2] - M.min[2];
@@ -847,6 +1003,7 @@ function updatePanels() {
     <span class="k opt">Volume</span><span class="v opt">${M.volume.toFixed(2)} m³</span>
     <span class="k opt">Total strut</span><span class="v opt">${M.totalLength.toFixed(1)} m</span>`;
 
+  if (M.gridshell) { updateGridshellPanels(M); $('pyCmd').textContent = pythonCommand(state); return; }
   if (M.lumber) { updateBoardPanels(M); $('pyCmd').textContent = pythonCommand(state); return; }
   $('strutTitle').textContent = 'Struts';
   $('lenHead').textContent = 'Length';

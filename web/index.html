@@ -218,6 +218,21 @@
   svg.board .hubn { font-size: 12px; font-weight: 700; }
   .cradle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
   .cradle-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; break-inside: avoid; }
+  .end-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 8px; }
+  .end-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; break-inside: avoid; }
+  .end-card .end-head { margin-bottom: 2px; }
+  svg.topview { display: block; max-width: 100%; height: auto; background: #f6f6f3; border-radius: 6px; margin-bottom: 6px; }
+  svg.topview .cradle { fill: #e6d6b8; stroke: #b49a6a; stroke-width: 1; }
+  svg.topview .wood { fill: #f0dfc0; stroke: #111; stroke-width: 1.5; }
+  svg.topview .waste { fill: #f7efe0; stroke: #999; stroke-width: 1; stroke-dasharray: 4 3; }
+  svg.topview .fence { stroke: #444; stroke-width: 5; }
+  svg.topview .blade { stroke: #c0362c; stroke-width: 2.5; }
+  svg.topview .square { stroke: #888; stroke-width: 1; stroke-dasharray: 3 3; }
+  svg.topview .arc { fill: none; stroke: #c0362c; stroke-width: 1.2; }
+  svg.topview .long { fill: #2457c5; }
+  svg.topview text { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #333; }
+  svg.topview .ang { font-size: 14px; font-weight: 700; fill: #c0362c; }
+  svg.topview .small { font-size: 10.5px; fill: #555; }
   .drawing-head .dot.jig { background: #555; }
   svg.cradle { display: block; max-width: 100%; height: auto; background: #fff; border-radius: 6px; }
   svg.cradle .table { stroke: #888; stroke-width: 2; }
@@ -1586,6 +1601,76 @@ function cradleSVG(c, J, L) {
   </svg>`;
 }
 
+/** End e of a board seen from above on the saw table, in metres: Y from the fence toward you, and
+    X along the fence with 0 where the cut crosses the edge that sits in the V. The board is a strip
+    across Y (its leaning cross-section seen from above) cut off by the vertical cut, and the cut's
+    normal on the table is (nX, nY). With a fence wedge the board, cradle and cut turn by the wedge. */
+function endTopView(bd, e, J, L) {
+  const { Xb, Yb, Zb, n } = e.frame, tl = bd.tails[e.end], lean = e.lean / R2D;
+  const T = (p) => [dot(p, Xb), dot(p, Yb), dot(p, Zb)];
+  const outer = [-1, 1].map((s) => T(add(tl.outer, mul(tl.walker, s))));
+  const corners = [...outer, ...[-1, 1].map((s) => T(add(tl.inner, mul(tl.walker, s))))];
+  // the edge in the V: of the outer face's two edges, the one against the back
+  const toBack = (p) => p[1] * Math.cos(lean) - p[2] * Math.sin(lean);
+  const v = toBack(outer[0]) > toBack(outer[1]) ? outer[0] : outer[1];
+  const yV = J.adjustable ? J.seat : J.seat * Math.cos(lean);  // the V's distance from the fence
+  const ys = corners.map((p) => p[1] - v[1] + yV);
+  let nX = dot(n, Xb), nY = dot(n, Yb);
+  // a wedge turns everything about the V point so the cut sits at the saw's miter
+  const turn = e.wedge ? -Math.sign(nX) * Math.sign(nY) * e.wedge / R2D : 0;
+  return { yV, yMin: Math.min(...ys), yMax: Math.max(...ys), nX, nY, turn, depth: J.adjustable ? J.seat + J.back * Math.sin(lean) : J.seat * Math.cos(lean) + J.back * Math.sin(lean) };
+}
+
+/** The top view as SVG: fence at the top, you at the bottom, the board in its cradle, the blade at
+    the miter with its angle from square, and the long point. */
+function endTopSVG(bd, e, J, L) {
+  const tv = endTopView(bd, e, J, L), W = 340, H = 176, s = 1000 * 1.05, oy = 22;
+  const waste = e.side === 'right' ? 1 : -1;
+  const xCut = (y) => (tv.nY * (tv.yV - y)) / tv.nX;           // the cut line, before any wedge turn
+  const midY = (tv.yMin + tv.yMax) / 2, ox = W / 2 - xCut(midY) * s;
+  const c = Math.cos(tv.turn), sn = Math.sin(tv.turn);
+  const rot = ([x, y]) => [x * c - (y - tv.yV) * sn, x * sn + (y - tv.yV) * c + tv.yV];
+  const P = (p) => { const [x, y] = rot(p); return [ox + x * s, oy + y * s]; };
+  const f1 = (v) => v.toFixed(1);
+  const poly = (pts, cls) => `<polygon class="${cls}" points="${pts.map((p) => P(p).map(f1).join(',')).join(' ')}"/>`;
+  const far = 0.4;                                             // well past the drawing's edge
+  const keep = [[-waste * far, tv.yMin], [xCut(tv.yMin), tv.yMin], [xCut(tv.yMax), tv.yMax], [-waste * far, tv.yMax]];
+  const off = [[xCut(tv.yMin), tv.yMin], [waste * far, tv.yMin], [waste * far, tv.yMax], [xCut(tv.yMax), tv.yMax]];
+  const cradle = [[-far, 0], [far, 0], [far, tv.depth], [-far, tv.depth]];
+  // the blade: the cut line across the table, from the fence toward you
+  const [bx0, by0] = P([xCut(0), 0]), [bx1, by1] = P([xCut(0.19), 0.19]);
+  const kx = (bx1 - bx0), ky = (by1 - by0), kl = Math.hypot(kx, ky), ux = kx / kl, uy = ky / kl;
+  const yF = oy, xF = bx0 + (yF - by0) * (kx / ky);           // where the blade meets the fence
+  const R = 34, a0 = Math.PI / 2, a1 = Math.atan2(uy, ux);
+  const sweep = a1 > a0 ? 1 : 0;
+  const arc = `<path class="arc" d="M${f1(xF)} ${f1(yF + R)} A${R} ${R} 0 0 ${sweep} ${f1(xF + R * ux)} ${f1(yF + R * uy)}"/>`;
+  const am = (a0 + a1) / 2;
+  const longY = (xCut(tv.yMin) - xCut(tv.yMax)) * waste > 0 ? tv.yMin : tv.yMax;
+  const [lx, ly] = P([xCut(longY), longY]);
+  const [cx, cy] = P([-waste * 0.09, (tv.yMin + tv.yMax) / 2]);
+  // the miter's label sits in the arc; the long point's label takes the first spot by its dot clear of it
+  const mx = xF + (R + 8) * Math.cos(am), my = yF + (R + 8) * Math.sin(am) + 5, mw = (e.miter.toFixed(1) + '°').length * 8.6;
+  const mBox = ux >= 0 ? [mx, my - 12, mx + mw, my + 3] : [mx - mw, my - 12, mx, my + 3];
+  const lw = 66, near = ux >= 0 ? -1 : 1;
+  const spots = (longY === tv.yMin ? [12, 24, -6] : [-6, -18, 12]).flatMap((dy) => [[near, dy], [-near, dy]]);
+  const boxOf = ([sg, dy]) => { const x = lx + sg * 8, y = ly + dy; return sg > 0 ? [x, y - 9, x + lw, y + 2] : [x - lw, y - 9, x, y + 2]; };
+  const clear = (b) => !(b[0] < mBox[2] && mBox[0] < b[2] && b[1] < mBox[3] && mBox[1] < b[3]) && b[0] >= 0 && b[2] <= W && b[1] >= oy + 2 && b[3] <= H;
+  const [lsg, ldy] = spots.find((sp) => clear(boxOf(sp))) || spots[0];
+  return `<svg class="topview" viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Board ${bd.type.label} end ${e.end + 1} from above">
+    ${poly(cradle, 'cradle')}${poly(keep, 'wood')}${poly(off, 'waste')}
+    <line class="fence" x1="0" y1="${oy}" x2="${W}" y2="${oy}"/>
+    <text class="small" x="6" y="${oy - 6}">fence${e.wedge ? ` · ${e.wedge}° wedge` : ''}</text>
+    <text class="small" x="${W / 2}" y="${H - 6}" text-anchor="middle">you</text>
+    <line class="square" x1="${f1(xF)}" y1="${f1(yF)}" x2="${f1(xF)}" y2="${f1(yF + R + 18)}"/>
+    <line class="blade" x1="${f1(xF)}" y1="${f1(yF)}" x2="${f1(xF + ux * (H - oy) / Math.max(0.2, uy))}" y2="${f1(H)}"/>
+    ${arc}
+    <text class="ang" x="${f1(mx)}" y="${f1(my)}" text-anchor="${ux >= 0 ? 'start' : 'end'}">${e.miter.toFixed(1)}°</text>
+    <circle class="long" cx="${f1(lx)}" cy="${f1(ly)}" r="3.5"/>
+    <text class="small" x="${f1(lx + lsg * 8)}" y="${f1(ly + ldy)}" text-anchor="${lsg > 0 ? 'start' : 'end'}">long point</text>
+    <text class="small" x="${f1(cx)}" y="${f1(cy + 4)}" text-anchor="middle">board ${bd.type.label}</text>
+  </svg>`;
+}
+
 /* =========================================================================
    State, URL hash and controls
    ========================================================================= */
@@ -2472,6 +2557,19 @@ function jigSheetHTML() {
       <td>long point ${e.longToward === 'fence' ? 'at the fence' : 'toward you'}${e.wedge ? `<span class="tag">${e.wedge}° fence wedge, thick end ${e.wedgeThick === 'far' ? 'away from' : 'at'} the blade</span>` : ''}</td>
       <td class="n${i ? ' big' : ''}">${i ? `stop ${pl.stop}<div class="tiny">along the ${pl.stopEdge} edge</div>` : `rough ${pl.overall + 10}`}</td>
       <td class="n">${degText(e.flat.miter)} / ${degText(e.flat.bevel)}${e.flat.bevel > JIG.maxBevel ? '<span class="tag">over 45°</span>' : ''}</td></tr>`;
+  const endCaption = (pl, e, i) => `
+        <div class="end-head"><b>End ${i + 1} · ${i ? 'right' : 'left'} end, hub ${e.hub}</b> · pass ${i + 1}</div>
+        <div>Cradle <b>${e.cradle.name}</b> (${degText(e.lean)} lean), <b>${faceText[e.back]}</b> on the back</div>
+        <div>Cut end ${sideText[e.side]} · miter <b>${degText(e.miter)}</b>, long point ${e.longToward === 'fence' ? 'at the fence' : 'toward you'}${e.wedge ? ` · ${e.wedge}° fence wedge, thick end ${e.wedgeThick === 'far' ? 'away from' : 'at'} the blade` : ''}</div>
+        <div>${i ? `Stop <b>${pl.stop} mm</b> along the ${pl.stopEdge} edge` : `From rough length <b>${pl.overall + 10} mm</b>`}</div>
+        <div class="tiny">No jig, flat on a wide face: miter ${degText(e.flat.miter)}, bevel ${degText(e.flat.bevel)}</div>`;
+  const boardCards = J.plans.map((pl) => `
+    <div class="drawing jig-board">
+      <div class="drawing-head"><span class="dot" style="background:${productColor(pl.bt.index)}">${pl.bt.label}</span>
+        <b>${pl.bt.members.length} pcs</b> · ${pl.overall} mm overall · hubs ${L.hubNo[pl.bt.rep.a]}–${L.hubNo[pl.bt.rep.b]}</div>
+      ${boardSVG(pl.bt.rep, L, productColor(pl.bt.index))}
+      <div class="end-grid">${pl.ends.map((e, i) => `<div class="end-card">${endTopSVG(pl.bt.rep, e, J, L)}${endCaption(pl, e, i)}</div>`).join('')}</div>
+    </div>`).join('');
   const head = `<thead><tr><th>Board</th><th class="n">Qty</th><th>End</th><th>Cradle</th><th>Face on the back</th><th>Cut end</th><th class="n">Miter</th><th>Direction</th><th class="n">Length, mm</th><th class="n">No jig: miter / bevel</th></tr></thead>`;
   return `
     <h1>Jig sheet · ${esc(d.title)}</h1>
@@ -2480,7 +2578,11 @@ function jigSheetHTML() {
     <p class="note">The board can't lie flat for this: a cradle tilts a board only about its length, and these cuts need it leaning ${rangeText(J.lean)} off its outer face. Check that your saw cuts ${mm(J.height)} mm tall at 0° bevel, ${mm(reach)} mm out from the fence; most 12-inch saws do, many 10-inch saws don't. Without a jig, the last column gives the settings with the board flat on a wide face instead (miter ${rangeText(J.flatMiter)}, bevel ${rangeText(J.flatBevel)}): only ${state.beamT} mm tall, but the blade tilts.</p>
     ${cradles}
 
-    <h2>Cutting steps</h2>
+    <h2>Boards in the jig</h2>
+    <p class="note">One card per board type: its cut drawing, as on the cut sheet, then each end seen from above on the saw table with the fence at the top. The board lies in its cradle, the red line is the blade at its miter from square, and the blue dot is the long point. The offcut is shown pale.</p>
+    ${boardCards}
+
+    <h2>Cutting order</h2>
     <p class="note">Cut the ends in two passes. Pass 1 cuts one end of every board, on boards cut to their rough length. Pass 2 cuts the other end to length. Each pass is in order of lean, then miter, so every setting is used in one go.</p>
     <h3>Pass 1 · first ends</h3>
     <div class="tablewrap-x"><table class="jig-steps">${head}<tbody>${J.passes[0].map(row).join('')}</tbody></table></div>
@@ -2573,7 +2675,7 @@ scheduleRebuild();
 loop();
 
 // Exposed for scripted checks against the Python generator.
-window.DomeZ = { buildJointLumber, boardDrawing, faceOpening, boardAxes, endSetup, buildJigs, jigCsvRows, buildModel, buildUnitGeodesic, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
+window.DomeZ = { buildJointLumber, boardDrawing, faceOpening, boardAxes, endSetup, buildJigs, endTopView, jigCsvRows, buildModel, buildUnitGeodesic, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
 </script>
 </body>
 </html>

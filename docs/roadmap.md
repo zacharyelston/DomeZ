@@ -48,9 +48,9 @@ Joint works with either. The plan is to follow the surface by default and report
 
 ## Engine
 
-Today the geometry exists twice: in JavaScript (`web/index.html`) and in Python (`domez/`). Tests keep the two face-for-face identical. To make "one engine" literal, the options are:
+Today the geometry exists twice: in JavaScript (`web/js/`, one script per part) and in Python (`domez/`). `tests/test_viewer_parity.py` keeps the two vertex-for-vertex and face-for-face identical. To make "one engine" literal, the options are:
 
-- a shared JavaScript module used by both the viewer and a command line
+- the viewer's `web/js/` scripts, which already run under Node for the tests, used by a command line too
 - a Rust core (see the `geodesic-rs/` prototype) compiled to WebAssembly for the viewer, with Python bindings
 
 This decision is still open.

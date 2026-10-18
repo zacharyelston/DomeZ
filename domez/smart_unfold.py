@@ -3,6 +3,7 @@
 Smart Unfolder - Analyzes mesh topology and selects appropriate unfolding strategy
 """
 
+import argparse
 import numpy as np
 from pathlib import Path
 from .unfold import steepest_edge_unfold, load_obj, build_adjacency, calculate_dihedral_angle
@@ -278,15 +279,18 @@ def merge_coplanar_triangles(vertices, faces, coplanar_pairs):
     return new_faces
 
 
-def main():
+def main(argv=None, prog=None):
     """Test smart unfolder on all polyhedra"""
+    parser = argparse.ArgumentParser(prog=prog, description="Analyse each .obj file's topology, pick an unfolding strategy and unfold it")
+    parser.add_argument('-i', '--input-dir', default='polyhedra_output', help='folder of .obj files to read (default: polyhedra_output)')
+    args = parser.parse_args(argv)
     print("Smart Unfolder - Topology-Aware Unfolding")
     print("="*60)
     
-    obj_files = sorted(Path('polyhedra_output').glob('*.obj'))
+    obj_files = sorted(Path(args.input_dir).glob('*.obj'))
     
     if not obj_files:
-        print("No OBJ files found in polyhedra_output/")
+        print(f"No OBJ files found in {args.input_dir}/")
         return
     
     results = {}

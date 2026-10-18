@@ -4,30 +4,14 @@ Visualize unfolded Platonic solids as PNG images
 Demonstrates the spiral unfolding concept
 """
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from pathlib import Path
 
-
-def load_obj(filename):
-    """Load vertices and faces from OBJ file"""
-    vertices = []
-    faces = []
-    
-    with open(filename, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith('v '):
-                parts = line.split()
-                vertices.append([float(parts[1]), float(parts[2]), float(parts[3])])
-            elif line.startswith('f '):
-                parts = line.split()
-                # OBJ is 1-indexed, convert to 0-indexed
-                face = [int(p.split('/')[0]) - 1 for p in parts[1:]]
-                faces.append(face)
-    
-    return np.array(vertices), faces
+from .unfold import load_obj
+from .unfold_svg import unfold_simple
 
 
 def project_face_2d(vertices, face_indices):
@@ -37,43 +21,6 @@ def project_face_2d(vertices, face_indices):
     # Use first two coordinates (x, y) as 2D projection
     # This is a simple projection - real unfolding would preserve edge lengths
     return face_verts[:, :2]
-
-
-def unfold_simple(vertices, faces):
-    """
-    Simple unfolding algorithm - lay out faces in a grid pattern
-    This is a placeholder for the real spiral algorithm
-    """
-    unfolded_faces = []
-    
-    # Calculate approximate face size
-    first_face = vertices[faces[0]]
-    face_size = np.max(np.ptp(first_face, axis=0))
-    
-    # Grid layout
-    cols = int(np.ceil(np.sqrt(len(faces))))
-    
-    for i, face in enumerate(faces):
-        row = i // cols
-        col = i % cols
-        
-        # Get face vertices
-        face_verts = vertices[face]
-        
-        # Project to 2D (simple orthographic)
-        face_2d = face_verts[:, :2]
-        
-        # Center the face
-        center = np.mean(face_2d, axis=0)
-        face_2d = face_2d - center
-        
-        # Position in grid
-        offset = np.array([col * face_size * 1.5, row * face_size * 1.5])
-        face_2d = face_2d + offset
-        
-        unfolded_faces.append(face_2d)
-    
-    return unfolded_faces
 
 
 def visualize_unfold(obj_file, output_file):
@@ -131,24 +78,28 @@ def visualize_unfold(obj_file, output_file):
     print(f"    {len(vertices)} vertices, {len(faces)} faces")
 
 
-def main():
+def main(argv=None, prog=None):
     """Generate PNG visualizations for all Platonic solids"""
+    parser = argparse.ArgumentParser(prog=prog, description="Draw each .obj file's faces as a PNG net (needs matplotlib)")
+    parser.add_argument('-i', '--input-dir', default='polyhedra_output', help='folder of .obj files to read (default: polyhedra_output)')
+    parser.add_argument('-o', '--output-dir', default='unfold_visualizations', help='folder to write into (default: unfold_visualizations)')
+    args = parser.parse_args(argv)
     print("Geodesic Unfold Visualizer")
     print("=" * 60)
     print()
     
     # Create output directory
-    output_dir = Path('unfold_visualizations')
-    output_dir.mkdir(exist_ok=True)
+    output_dir = Path(args.output_dir)
     
     # Find all OBJ files in polyhedra_output
-    obj_files = list(Path('polyhedra_output').glob('*.obj'))
+    obj_files = list(Path(args.input_dir).glob('*.obj'))
     
     if not obj_files:
-        print("No OBJ files found in polyhedra_output/")
+        print(f"No OBJ files found in {args.input_dir}/")
         print("Run: python3 -m domez polyhedra --type all")
         return
     
+    output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Found {len(obj_files)} polyhedra to visualize")
     print()
     

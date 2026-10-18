@@ -71,20 +71,21 @@ The viewer's **Python** box prints the command or snippet for whatever you've de
 ## Repository layout
 
 ```
-web/index.html        3D viewer (single file; Three.js from a CDN)
+web/index.html        3D viewer page (Three.js from a CDN)
+web/js/               the viewer's geometry, lumber, jig and sheets, one script per part (docs/viewer.md#code-layout)
 domez/                Python package
   dome.py               spheres and domes: flat grid and Acidome methods     python3 -m domez dome
   shapes.py             ellipsoids, eggs, tubes                              python3 -m domez shapes
   polyhedra.py          Platonic solids, stella octangula                    python3 -m domez polyhedra
   unfold.py             steepest-edge unfolding                              python3 -m domez unfold
   smart_unfold.py, coplanar.py, spec_sheet.py, unfold_svg.py, unfold_plot.py
-tests/                test_geodesics.py, test_unfolding.py, data/
+tests/                Python tests (test_*.py, data/) and the viewer's tests (js/)
 examples/             domes.py, moonpies/ (spacecraft example), gallery/ (SVG nets and spec sheets)
 docs/                 documentation (start at docs/README.md)
 geodesic-rs/          Rust prototype
 tools/acidome_height.py  builds Acidome Height+ from your offline Acidome copy (vendor/, git-ignored)
 pyproject.toml        package metadata (pip install -e .)
-.github/workflows/    pages.yml publishes web/ to GitHub Pages on every push to main
+.github/workflows/    tests.yml runs every test; pages.yml publishes web/ to GitHub Pages on every push to main
 ```
 
 ## Documentation
@@ -98,10 +99,13 @@ pyproject.toml        package metadata (pip install -e .)
 ## Tests
 
 ```bash
-python3 tests/test_geodesics.py    # Acidome vectors, eggs, options; flat-grid output unchanged
-python3 tests/test_unfolding.py    # unfolding of freshly generated polyhedra
+python3 tests/test_geodesics.py       # Acidome vectors, eggs, options; flat-grid output unchanged
+python3 tests/test_unfolding.py       # unfolding of freshly generated polyhedra
+python3 tests/test_tools.py           # command line, polyhedra, merging, spec sheets, SVG and PNG nets
+python3 tests/test_viewer_parity.py   # the viewer and the package build the same meshes (needs Node)
 python3 tests/test_acidome_height.py  # the Acidome Height+ patch (skipped without your Acidome copy)
-pytest                             # both, if pytest is installed
+pytest                                # all of the above, if pytest is installed
+node --test 'tests/js/*.test.mjs'     # the viewer, one file per part (Node 22+)
 ```
 
 ## Credits and license

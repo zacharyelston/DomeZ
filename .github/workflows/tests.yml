@@ -1,0 +1,47 @@
+# Runs the Python tests (domez/, tools/) and the viewer's tests (web/js/) on every pull request and on main.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Node lets tests/test_viewer_parity.py compare the viewer's meshes with the package's
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: python -m pip install numpy matplotlib pytest
+
+      - run: python -m pytest -q
+
+  viewer:
+    name: Viewer (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: node --test 'tests/js/*.test.mjs'

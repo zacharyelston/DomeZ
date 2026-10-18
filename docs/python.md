@@ -28,13 +28,13 @@ python3 -m domez <command> [options]       # or: domez <command> [options] after
 | `dome` | Geodesic spheres and domes: flat grid or Acidome methods, cuts, flat base |
 | `shapes` | Ellipsoids, eggs, tubes and a spacecraft example |
 | `polyhedra` | Platonic solids and the stella octangula |
-| `unfold` | Steepest-edge unfolding of the OBJ files in `polyhedra_output/` |
+| `unfold` | Steepest-edge unfolding of a folder of OBJ files |
 | `smart-unfold` | Unfolding with topology detection and strategy selection |
 | `spec-sheets` | SVG spec sheets (3D view, unfolded net, statistics) |
 | `unfold-svg` | SVG drawings of unfolded nets |
 | `unfold-plot` | Matplotlib drawings of unfolded nets (needs matplotlib) |
 
-The unfolding commands read `polyhedra_output/`, so run `python3 -m domez polyhedra` first.
+The unfolding and drawing commands read a folder of OBJ files, `polyhedra_output/` unless you pass `-i FOLDER`, so run `python3 -m domez polyhedra` first. `spec-sheets`, `unfold-svg` and `unfold-plot` write into `-o FOLDER` (`spec_sheets/` or `unfold_visualizations/` by default).
 
 ### `dome`
 

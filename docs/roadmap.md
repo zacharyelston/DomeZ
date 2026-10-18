@@ -13,7 +13,7 @@ Two things drive the work:
 
 - Acidome's Chords, Arcs, Mexican and Kruschke subdivision, row cuts and flat base, matching acidome.com exactly ([acidome.md](acidome.md)).
 - Ellipsoid and Hügelschäffer egg shapes, in the [web viewer](viewer.md) and the [Python package](python.md), kept face-for-face identical by tests.
-- Strut and hub tables, OBJ export and cut-list CSV.
+- Strut and hub tables, a printable cut sheet (struts, hubs and panel triangles, with CSV) and OBJ export.
 - Steepest-edge unfolding into flat nets, with tests on the Platonic solids and 3V domes ([unfolding primer](unfolding-primer.md)).
 
 ## Next: build outputs (Acidome's tabs, generalised)

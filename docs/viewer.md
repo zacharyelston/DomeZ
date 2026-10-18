@@ -50,7 +50,12 @@ Connector type and beam size. These are currently passed through to the Acidome 
 ### Export
 
 - **Download OBJ**: vertices and faces in metres, Z up (as the Python tools write) or Y up. Optionally adds struts as `l` lines. The header records every setting and a link back to the viewer.
-- **Cut list CSV**: per strut type the mean, minimum and maximum length and the count, then hub counts by valence.
+- **Cut sheet**: a printable page for the build, with three tables:
+  - **Struts:** each type's letter, quantity, hub-to-hub length in mm and inches, any spread within the type, and which hub types it joins.
+  - **Hubs:** each type's quantity, and the strut types around it, anticlockwise as seen from outside (marked if it sits on the cut edge).
+  - **Panels:** each triangle type's quantity, side types, side lengths, corner angles and area. Mirror-image panels are one type.
+
+  **Print** prints just the sheet. **Download CSV** saves the same tables as a sectioned spreadsheet file. Lengths are centre to centre; take off your connector's allowance for cut lengths. Lumber cut drawings (miter and bevel per board end) are on the [roadmap](roadmap.md); meanwhile Acidome Height+ produces them ([acidome.md](acidome.md#acidome-height)).
 - **Copy link**: the viewer URL with the current settings.
 
 ### Acidome and Python boxes

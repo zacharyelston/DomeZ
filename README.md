@@ -16,7 +16,7 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 | | |
 |---|---|
 | **Acidome Height+** (`tools/acidome_height.py`) | Builds a local copy of the Acidome calculator with **Height ×**, **Egg point** and **Panel gap** controls: Acidome's own tabs, Joint and other beam cut drawings and typing on taller, flatter or egg-shaped domes, plus each triangle's opening as panel form sizes ([details](docs/acidome.md#acidome-height)) |
-| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; strut and hub tables; a printable cut sheet (struts, hubs and panel triangles in mm and inches, plus CSV); OBJ export; shareable links |
+| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; Acidome's Joint timber frame with board types and cut drawings; a printable cut sheet (boards with saw settings, hubs, panel openings, plus CSV); OBJ and board exports; shareable links |
 | **Python package** (`domez/`) | The same geometry as a library and command line, kept face-for-face identical to the viewer by tests |
 | **Unfolding** | Steepest-edge unfolding of meshes into flat nets, with SVG spec sheets |
 | **Rust prototype** (`geodesic-rs/`) | An early unfolder CLI; a candidate core for a shared engine |
@@ -65,7 +65,7 @@ The viewer's **Python** box prints the command or snippet for whatever you've de
 | Strut, hub and panel types; printable cut sheet and CSV; OBJ | ✓ |
 | Flat nets by steepest-edge unfolding | ✓ Platonic solids and 3V domes |
 | Acidome's tabs and lumber cut drawings on stretched and egg domes, with panel form sizes | ✓ Acidome Height+ (local patch of your Acidome copy) |
-| Framework: lumber cut drawings in the DomeZ viewer, for eggs | Next |
+| Joint timber frame in the viewer: board types, Acidome-style cut drawings, saw settings, panel openings | ✓ Same as acidome.com on spheres and Acidome Height+ on ellipsoids and eggs |
 | Scheme, Base, Cover and Tent views; panel calculator; snow pitch map; double skins | Planned ([roadmap](docs/roadmap.md)) |
 
 ## Repository layout

@@ -17,12 +17,21 @@ DomeZ is an independent project, not affiliated with Acidome, and contains none 
 | Partial cut | ✓ | Pentad: whole waves of edge-adjacent faces from the top hub until the fraction of all faces is reached. Cross and Triad: faces whose centroid is above y = 1 − 2f |
 | Offered fractions | ✓ | Icosahedron: p/(4V) for p = V, V+2, … 3V, then 1/1. Octahedron: its own row list. Other fractions snap to the nearest offered one |
 | Flat base (`Flat_`, `ground_`, `Align_`) | ✓ | Boundary hubs move along their meridians to the boundary height closest to the equator |
-| URL hash | ✓ | The viewer writes Acidome's hash for the current dome |
 | Class II and III subdivision, fullerenes | — | Not ported |
-| Products: beams, connectors, cut drawings | — | Next on the [roadmap](roadmap.md) |
-| Base, Scheme, Cover and Tent views | — | On the [roadmap](roadmap.md) |
+| Joint boards: solids, end cuts, board, hub and face types, cut drawings | ✓ | In the viewer, with saw settings and panel openings added |
+| GoodKarma, Piped, Cone, Semicone and Nose connectors | — | On the [roadmap](roadmap.md) |
+| Base, Scheme and Tent views | — | On the [roadmap](roadmap.md); the cut sheet covers boards, hubs and panels |
 
-The viewer's **Acidome** box shows the hash for the current dome, for example `3/4_Joint_3V_R3_beams_120x40`. Tokens must appear in Acidome's order: `[Octohedron_][Flat_]<partial>_[Method_][Symmetry_]<connector>_<V>V_R<radius>_beams_<W>x<T>`. Chords and Pentad are the defaults and are left out. Acidome only recognises the octahedron when it's spelled `Octohedron`.
+For comparing with Acidome, its URL hash for a dome is `[Octohedron_][Flat_]<partial>_[Method_][Symmetry_]<connector>_<V>V_R<radius>_beams_<W>x<T>`, with tokens in exactly that order, e.g. `3/4_Joint_3V_R3_beams_120x40`. Chords and Pentad are the defaults and are left out, and Acidome only recognises the octahedron spelled `Octohedron`.
+
+### Joint boards
+
+The viewer's Joint frame follows Acidome's construction:
+- **Board:** each board is a straight W × T prism whose mid-plane passes through the dome's centre, turned about its strut so each hub sits T/2 to one side.
+- **End cuts:** each end is cut against the facing side of the next board clockwise around the hub.
+- **Typing:** boards are typed by overall length (1 mm) and end cuts (0.1°), most numerous first. Hubs are typed by the real face-corner and strut angles around them, and faces by their real triangle.
+
+On the reference dome `3/4_Joint_3V_R3_beams_120x40`, every board type, every mark and angle on the four cut drawings, the hub types and the face types match acidome.com. On ellipsoids and eggs, the board ends are found on the sphere through each hub (the Acidome Height+ fix). The viewer's ellipsoid 3 × 3 × 4.2 m and egg 7.8 × 6 m with an 8% point match Acidome Height+ at `h=1.4` and at `h=1.3&egg=8`: 28 and 42 board types with identical quantities and lengths.
 
 ## Verification
 

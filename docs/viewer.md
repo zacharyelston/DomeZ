@@ -33,35 +33,47 @@ Every shape is built on a unit sphere and then stretched, so the cut and the hub
 - **Sphere part**: the fraction of the full sphere to keep. The Acidome methods only offer the fractions that end on complete rows of faces (the chips, which depend on the base and frequency), and the slider snaps to them. The flat grid takes any value.
 - **Flatten base ring**: moves the hubs on the cut edge along their meridians to the edge height closest to the equator, so the dome stands on one plane (Acidome's rule).
 
+### Frame
+
+- **Connection**: **Joint boards** (the default), clockwise or anticlockwise, or **Struts only** for hub-to-hub struts.
+
+  Joint is Acidome's hubless timber frame. Every board is a straight piece of lumber, width along the radius and thickness across, and the boards lock around each hub as a pinwheel. Each end is cut flat against the side of the next board clockwise (or anticlockwise), seen from outside. The construction is ported from Acidome and reproduces its boards, typing and cut drawings exactly on spheres. On ellipsoids and eggs every board still aims at the dome's centre, and the results match Acidome Height+.
+- **Boards (mm)**: width × thickness, e.g. 120 × 40, or 89 × 38 for a 2×4 on edge.
+- **Panel gap (mm)**: the gap a cast panel leaves to the boards around it, for the panel sizes on the cut sheet.
+
 ### Display
 
-Panels (off, glass or solid), struts, hubs, strut colours by type, and auto-rotate. Hovering a strut shows its type and length and highlights every strut of that type; clicking a row in the strut table pins the highlight.
+Panels (off, glass or solid), the frame, hubs (struts only), colours by type, and auto-rotate. Hovering a board or strut shows its type and length and highlights every piece of that type; clicking a row in the sidebar table pins the highlight.
 
-### Struts
+### Boards and struts
+
+With Joint boards, the sidebar lists the board types as Acidome types them: the same overall length to the millimetre and the same end cuts to 0.1°, with A the most numerous. Each row gives the overall length and the hub types at the board's ends, and the hub line gives the hub types. With struts only:
 
 - **Group within**: struts whose lengths differ by less than this many millimetres count as one type.
 - The table lists each type's length, its chord factor (length ÷ radius; for ellipsoids and eggs, the spread within the type) and its count.
 - The hub line counts hubs by how many struts meet there.
 
-### Build
-
-Connector type and beam size. These are currently passed through to the Acidome link; the lumber cut drawings are on the [roadmap](roadmap.md).
-
 ### Export
 
 - **Download OBJ**: vertices and faces in metres, Z up (as the Python tools write) or Y up. Optionally adds struts as `l` lines. The header records every setting and a link back to the viewer.
-- **Cut sheet**: a printable page for the build, with three tables:
-  - **Struts:** each type's letter, quantity, hub-to-hub length in mm and inches, any spread within the type, and which hub types it joins.
-  - **Hubs:** each type's quantity, and the strut types around it, anticlockwise as seen from outside (marked if it sits on the cut edge).
-  - **Panels:** each triangle type's quantity, side types, side lengths, corner angles and area. Mirror-image panels are one type.
+- **Boards OBJ** (Joint): every board as a closed solid, grouped by board type, like Acidome's "Framework .obj".
+- **Cut sheet**: a printable page for the build.
+  - **With Joint boards:**
+    - **Boards table:** each board type's quantity, its overall length (corner to corner, in mm and inches), its shortest edge and the hub types at its ends, plus saw settings for each end with the outer face on the table (miter and blade bevel).
+    - **Cut drawings:** one per board type, drawn as in Acidome. They show the outer face seen from outside, with mm marks along both edges where the cut crosses the outer face and the hidden inner face (dashed). Blue ∟ is the angle between the outer face and the cut, red the miter, circles the hub types (one spoke per board), and black ∟ the angle between each neighbouring panel and the board's side.
+    - **Hubs table:** Acidome's hub types, with the board types around each hub.
+    - **Panels table:** Acidome's face types with the board along each side. For each it gives the triangle between the boards' centre planes, the **opening** between the boards' facing sides at their outer face (the panel form size), the opening at their inner face, and, with a panel gap set, the panel size.
+  - **With struts only:**
+    - **Struts table:** each type's letter, quantity, hub-to-hub length in mm and inches, any spread within the type, and which hub types it joins.
+    - **Hubs table:** each type's quantity, and the strut types around it, anticlockwise as seen from outside (marked if it sits on the cut edge).
+    - **Panels table:** each triangle type's quantity, side types, side lengths, corner angles and area. Mirror-image panels are one type.
 
-  **Print** prints just the sheet. **Download CSV** saves the same tables as a sectioned spreadsheet file. Lengths are centre to centre; take off your connector's allowance for cut lengths. Lumber cut drawings (miter and bevel per board end) are on the [roadmap](roadmap.md); meanwhile Acidome Height+ produces them ([acidome.md](acidome.md#acidome-height)).
+  **Print** prints just the sheet. **Download CSV** saves the same tables (and, for boards, every drawing's marks) as a sectioned spreadsheet file.
 - **Copy link**: the viewer URL with the current settings.
 
-### Acidome and Python boxes
+### Python box
 
-- **Acidome**: the same dome as an Acidome URL hash, with buttons for acidome.com and for a local offline copy (see [acidome.md](acidome.md#offline-copy)). The offline button only appears when the copy is present, so the hosted viewer shows acidome.com only. Acidome only builds spheres, so ellipsoids and eggs open as the nearest sphere; the box notes any other difference.
-- **Python**: the `python3 -m domez dome …` command, or `from domez import …` snippet, that builds the same mesh. See [python.md](python.md).
+The `python3 -m domez dome …` command, or `from domez import …` snippet, that builds the same mesh. See [python.md](python.md).
 
 ## URL parameters
 
@@ -82,8 +94,9 @@ Only values that differ from the defaults are written to the hash.
 | `partial` | `7/12` | a fraction (`3/4`) or decimal |
 | `flat` | `0` | `1` flattens the base ring |
 | `tol` | `1` | strut grouping tolerance (mm) |
-| `conn` | `GoodKarma` | Acidome connector token, e.g. `Joint`, `Piped_D108` |
-| `beamW`, `beamT` | `120`, `40` | beam width and thickness (mm) |
+| `frame` | `joint` | `joint`, `joint-ccw` (anticlockwise) or `struts` |
+| `beamW`, `beamT` | `120`, `40` | board width (along the radius) and thickness (mm) |
+| `gap` | `0` | panel gap to the boards (mm), for panel sizes |
 | `panels` | `glass` | `off`, `glass` or `solid` |
 | `showStruts`, `showHubs`, `colorTypes`, `spin` | `1`, `1`, `1`, `0` | display toggles |
 | `upAxis` | `z` | OBJ up axis, `z` or `y` |

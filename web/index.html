@@ -104,6 +104,9 @@
     padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap;
   }
   .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+  .pair { display: flex; gap: 6px; align-items: center; }
+  .pair input { width: 100%; background: var(--field); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; text-align: right; }
+  .pair span { color: var(--muted); }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 10px 100px; }
   .chips button {
     border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px;
@@ -192,6 +195,25 @@
   .sheet-body .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
   .sheet-body .tag { display: inline-block; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
   .sheet-body .link { word-break: break-all; color: var(--muted); font-size: 12px; }
+  .sheet-body .blue-t { color: #2457c5; } .sheet-body .red-t { color: #c0362c; }
+  .drawing { margin: 14px 0 6px; break-inside: avoid; }
+  .drawing-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .drawing-head .dot { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 4px; border-radius: 12px; color: #fff; font-weight: 700; font-size: 12px; text-shadow: 0 0 2px rgba(0,0,0,.6); }
+  svg.board { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+  svg.board .ref { stroke: #b9b9b9; stroke-width: 1; }
+  svg.board .wood { stroke: #111; stroke-width: 2; }
+  svg.board .gap { stroke: #888; stroke-width: 2; stroke-dasharray: 2 5; }
+  svg.board .cut { stroke: #111; stroke-width: 2; }
+  svg.board .cut.hidden { stroke-dasharray: 6 4; stroke-width: 1.4; }
+  svg.board text { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #111; }
+  svg.board .mark.inner { fill: #555; }
+  svg.board .lab { fill: #777; }
+  svg.board .blue { fill: #2457c5; font-size: 14px; }
+  svg.board .red { fill: #c0362c; font-size: 14px; }
+  svg.board .face { fill: #333; font-size: 12px; }
+  svg.board .spoke { stroke: #aaa; stroke-width: 1.2; }
+  svg.board .hubc { fill: #fff; stroke: #999; stroke-width: 1.2; }
+  svg.board .hubn { font-size: 12px; font-weight: 700; }
   @media (max-width: 820px) {
     .sheet-body { padding: 16px 16px 48px; }
     .sheet-body .tablewrap-x { overflow-x: auto; }
@@ -275,12 +297,12 @@
     </section>
 
     <section>
-      <h2>Struts</h2>
+      <h2 id="strutTitle">Struts</h2>
       <div class="row"><label for="tol">Group within</label><input type="range" id="tol" min="0" max="20" step="0.5"><output data-for="tol"></output></div>
       <p class="hint" id="strutHint"></p>
       <div class="tablewrap">
         <table class="struts">
-          <thead><tr><th>Type</th><th class="n">Length</th><th class="n" id="cfHead">Chord</th><th class="n">Qty</th></tr></thead>
+          <thead><tr><th>Type</th><th class="n" id="lenHead">Length</th><th class="n" id="cfHead">Chord</th><th class="n">Qty</th></tr></thead>
           <tbody id="strutRows"></tbody>
         </table>
       </div>
@@ -288,25 +310,25 @@
     </section>
 
     <section>
-      <h2>Build</h2>
-      <div class="row two"><label for="conn">Connector</label>
-        <select id="conn">
-          <option value="Cone_D108">Cone (D108)</option>
-          <option value="Piped_D108">Piped (D108)</option>
-          <option value="Semicone">Semicone</option>
-          <option value="Joint">Joint</option>
-          <option value="Nose">Nose</option>
-          <option value="GoodKarma">GoodKarma</option>
+      <h2>Frame</h2>
+      <div class="row two"><label for="frame">Connection</label>
+        <select id="frame">
+          <option value="joint">Joint boards, clockwise</option>
+          <option value="joint-ccw">Joint boards, anticlockwise</option>
+          <option value="struts">Struts only (hub to hub)</option>
         </select>
       </div>
-      <div class="row two"><label>Beams (mm)</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="number" id="beamW" min="1" step="1" style="width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit;text-align:right">
-          <span style="color:var(--muted)">×</span>
-          <input type="number" id="beamT" min="1" step="1" style="width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit;text-align:right">
+      <div class="row two" data-lumber><label>Boards (mm)</label>
+        <div class="pair">
+          <input type="number" id="beamW" min="1" step="1" title="Width, along the radius">
+          <span>×</span>
+          <input type="number" id="beamT" min="1" step="1" title="Thickness, across the board">
         </div>
       </div>
-      <p class="hint">Connector and beam size are passed to Acidome; lengths here are centre-to-centre at the hub.</p>
+      <div class="row two" data-lumber><label for="gap">Panel gap (mm)</label>
+        <div class="pair"><input type="number" id="gap" min="0" step="1" title="Gap between a cast panel and the boards around it"><span></span><span></span></div>
+      </div>
+      <p class="hint" id="frameHint"></p>
     </section>
 
     <section>
@@ -317,17 +339,11 @@
       <label class="check"><input type="checkbox" id="objLines"> Include struts as OBJ lines</label>
       <div class="btns">
         <button class="btn primary" id="dlObj">Download OBJ</button>
+        <button class="btn" id="dlBoards" data-lumber>Boards OBJ</button>
         <button class="btn" id="openSheet">Cut sheet</button>
         <button class="btn" id="copyLink">Copy link</button>
         <button class="btn" id="resetBtn">Reset</button>
       </div>
-      <h2 style="margin-top:14px">Acidome</h2>
-      <p class="hint" id="acidomeHint"></p>
-      <div class="btns">
-        <a class="btn" id="acidomeLocal" target="_blank" rel="noopener">Offline copy</a>
-        <a class="btn" id="acidomeWeb" target="_blank" rel="noopener">acidome.com</a>
-      </div>
-      <pre class="cmd" id="acidomeHash"></pre>
       <h2 style="margin-top:14px">Python</h2>
       <pre class="cmd" id="pyCmd"></pre>
     </section>
@@ -759,25 +775,48 @@ function effectivePartial(p) {
 
 /* ---------- Pipeline ---------- */
 
-/** Unit-sphere mesh after subdivision, cut and optional base flattening, z-up. */
-function buildUnitGeodesic(p) {
+/** Each edge once, in the order the mesh builder creates it and with its direction, as Acidome
+    stores its lines. Acidome draws a board with its line's first hub on the left. */
+function lineOrderOf(tris, style) {
+  const seen = new Set(), order = [];
+  for (const [a, b, c] of tris) {
+    const pairs = style === 'bca' ? [[b, c], [c, a], [a, b]] : [[a, b], [b, c], [c, a]];
+    for (const [u, v] of pairs) {
+      const k = u < v ? u + ',' + v : v + ',' + u;
+      if (!seen.has(k)) { seen.add(k); order.push([u, v]); }
+    }
+  }
+  return order;
+}
+
+/** The whole unit-sphere mesh (z-up, outward winding) before the cut, with the cut's keep flags and
+    Acidome's line order. Acidome builds boards on the whole mesh and only then drops cut faces. */
+function buildUnitFull(p) {
   const frac = parsePartial(effectivePartial(p));
   const f = Math.max(1, p.freq | 0);
-  let mesh, keep;
+  let mesh, keep, lineOrder;
   if (p.method === 'flat') {
     mesh = pythonGeodesic(p.base, p.sym, f);
     keep = pythonCut(mesh, frac.value);
     if (p.flat && frac.value < 1) flattenBase(mesh, keep, 2);
+    lineOrder = lineOrderOf(mesh.tris, 'abc');
   } else {
-    const m = METHODS[effectiveMethod(p)];
-    mesh = m.build(acidomeBase(p.base, p.sym), f);
+    const method = effectiveMethod(p);
+    mesh = METHODS[method].build(acidomeBase(p.base, p.sym), f);
+    lineOrder = lineOrderOf(mesh.tris, method === 'arcs' || method === 'mexican' ? 'bca' : 'abc');
     if (frac.value >= 1) keep = mesh.tris.map(() => true);
     else keep = p.sym === 'pentad' ? acSliceByFraction(mesh, frac) : acSliceByAxis(mesh, frac);
     if (p.flat && frac.value < 1) flattenBase(mesh, keep, 1);
     // y-up -> z-up, and flip Acidome's inward winding so faces point out.
     mesh = { pts: mesh.pts.map((q) => [q[0], -q[2], q[1]]), tris: mesh.tris.map((t) => [t[0], t[2], t[1]]) };
   }
-  return compact({ pts: mesh.pts, tris: mesh.tris.filter((t, i) => keep[i]) });
+  return { pts: mesh.pts, tris: mesh.tris, keep, lineOrder };
+}
+
+/** Unit-sphere mesh after subdivision, cut and optional base flattening, z-up. */
+function buildUnitGeodesic(p) {
+  const full = buildUnitFull(p);
+  return compact({ pts: full.pts, tris: full.tris.filter((t, i) => full.keep[i]) });
 }
 
 /** Drop vertices no face uses, keeping the original order. */
@@ -910,9 +949,12 @@ function typeHubsAndPanels(pts, tris, edges, groupOf, groups) {
 }
 
 function buildModel(p) {
-  const mesh = buildUnitGeodesic(p);
+  const full = buildUnitFull(p);
   const T = shapeTransform(p);
-  const pts = mesh.pts.map(T);
+  full.unit = full.pts;
+  full.pts = full.unit.map(T);
+  const mesh = compact({ pts: full.pts, tris: full.tris.filter((t, i) => full.keep[i]) });
+  const pts = mesh.pts;
   const tris = mesh.tris;
   const { edges } = edgesOf(tris, pts.length);
   const lengths = edges.map(([a, b]) => len(sub(pts[a], pts[b])));
@@ -933,7 +975,388 @@ function buildModel(p) {
     vol += dot(sub(A, origin), cross(sub(B, origin), sub(C, origin))) / 6;
   }
   return { pts, tris, edges, lengths, groups, groupOf, hubs, min, max, area, volume: Math.abs(vol),
-           totalLength: lengths.reduce((s, l) => s + l, 0), ...typeHubsAndPanels(pts, tris, edges, groupOf, groups) };
+           totalLength: lengths.reduce((s, l) => s + l, 0), ...typeHubsAndPanels(pts, tris, edges, groupOf, groups),
+           full, lumber: p.frame === 'struts' ? null : buildJointLumber(full, p) };
+}
+
+/* =========================================================================
+   Lumber: Acidome's Joint connection (a hubless pinwheel of boards)
+
+   Ported from the Acidome calculator (acidome.ru/lab/calc, by popitch). Every board is a straight
+   W × T prism, W along the radius and T across. Its mid-plane passes through the dome's centre (the
+   origin) and is turned about the strut so each hub sits T/2 to one side. Each end is cut flat
+   against the facing side of the next board clockwise (anticlockwise for "joint-ccw") around that
+   hub. Boards are built on the whole uncut mesh, as in Acidome, and then only boards of kept faces
+   are listed. On a sphere this reproduces Acidome exactly. On ellipsoids and eggs every board still
+   aims at the centre, and each end is found on the sphere through its own hub (the Acidome Height+
+   fix), so stretched shapes match Acidome Height+.
+   ========================================================================= */
+const ORIGIN = [0, 0, 0];
+const unit = (a) => norm(a);
+const comp = (v, d) => dot(v, unit(d));
+const angleBetween = (a, b) => Math.acos(Math.max(-1, Math.min(1, dot(a, b) / (len(a) * len(b)))));
+const au = (rad) => Math.round(rad * 180 / Math.PI / 0.1);          // tenths of a degree, as Acidome rounds
+
+/** Unit vectors x with u·x = du and v·x = dv (Acidome's Solutions.twoPlanesAndSphere). */
+function unitsOnTwoPlanes(u, du, v, dv) {
+  const uu = dot(u, u), uv = dot(u, v), vv = dot(v, v), det = uu * vv - uv * uv;
+  const a = (du * vv - dv * uv) / det, b = (dv * uu - du * uv) / det;
+  const x0 = add(mul(u, a), mul(v, b)), c = cross(u, v);
+  const lam = Math.sqrt(Math.max(0, 1 - dot(x0, x0)) / dot(c, c));
+  return [sub(x0, mul(c, lam)), add(x0, mul(c, lam))];
+}
+
+/** Acidome's palette for product types (beam A, hub 1 and face 1 share a colour). */
+const PRODUCT_COLORS = (() => {
+  const line = ['#CC2222', '#CCCC22', '#22CC22', '#058361', '#272C5B', '#A72465', '#F2801F', '#95B6E1', '#00617E', '#8B4588'];
+  const dim = 10, steps = [], shifting = [];
+  for (let i = 0; i < dim; i++) steps.push(255 - Math.floor((255 / dim) * i));
+  for (let i = 0; i < dim; i++) if (i % 2) shifting.push(i);
+  for (let i = 0; i < dim; i++) if (!(i % 2)) shifting.push(i);
+  const hex = (x) => Math.max(0, Math.min(255, x)).toString(16).toUpperCase().padStart(2, '0');
+  for (let k = 0; k < dim; k++) for (let j = 0; j < dim; j++) for (let i = 0; i < dim; i++) {
+    const s = shifting[i] + shifting[j] + shifting[k];
+    if (s % 2 === 0 && s > 2 && s < dim * 3 - 2) {
+      const mod = Math.floor(s / 2);
+      if (mod % 3 !== 2 && !(mod % 2)) line.push('#' + hex(steps[shifting[i]]) + hex(steps[shifting[j]]) + hex(steps[shifting[k]]));
+    }
+  }
+  return line;
+})();
+const productColor = (k) => PRODUCT_COLORS[k] || PRODUCT_COLORS[98] || '#888888';
+
+/** Number groups Acidome's way: most members first, then (optionally) longer first, then key descending. */
+function acidomeNumbering(groups, longer) {
+  return [...groups.entries()].sort((A, B) =>
+    (B[1].length - A[1].length) || (longer ? longer(B[1][0]) - longer(A[1][0]) : 0) || (A[0] < B[0] ? 1 : A[0] > B[0] ? -1 : 0));
+}
+
+/** Lexicographically largest of the candidate sequences (Acidome's selectChain), with a tolerance. */
+function largestChain(cands, tol) {
+  return cands.reduce((best, c) => {
+    for (let i = 0; i < Math.min(best.length, c.length); i++) {
+      const d = c[i][1] - best[i][1];
+      if (Math.abs(d) > tol) return d > 0 ? c : best;
+    }
+    return best;
+  });
+}
+
+function buildJointLumber(full, p) {
+  const P = full.pts, n = P.length;
+  const t = p.beamT / 1000, w = p.beamW / 1000;
+  const sigma = p.frame === 'joint-ccw' ? -1 : 1;
+  const key = (a, b) => (a < b ? a * n + b : b * n + a);
+
+  // edges in Acidome's line order, with the third vertex of each face on them
+  const edges = full.lineOrder.map(([a, b]) => ({ a, b, thirds: [], faces: [] }));
+  const edgeAt = new Map(edges.map((e, i) => [key(e.a, e.b), i]));
+  full.tris.forEach(([x, y, z], f) => {
+    for (const [u, v, o] of [[x, y, z], [y, z, x], [z, x, y]]) { const e = edges[edgeAt.get(key(u, v))]; e.thirds.push(o); e.faces.push(f); }
+  });
+
+  // board mid-planes through the centre: n·P0 = σt/2, n·P1 = -σt/2, n·(P0×P1) > 0
+  for (const e of edges) {
+    const A = P[e.a], B = P[e.b], lineNormal = cross(A, B);
+    const sols = unitsOnTwoPlanes(A, sigma * t / 2, B, -sigma * t / 2);
+    e.n = dot(sols[0], lineNormal) > 0 ? sols[0] : sols[1];
+    e.lineNormal = lineNormal;
+  }
+
+  const tailAt = (e, hub, other) => {
+    const H = P[hub], Q = P[other], res = dot(e.n, H);
+    // the wall: of the two struts that share a face with this one at the hub, the one across the mid-plane
+    let wall = null;
+    for (const T of e.thirds) if (dot(e.n, P[T]) * res < 0) wall = edges[edgeAt.get(key(hub, T))];
+    let nW = wall.n;
+    if (dot(nW, Q) < 0) nW = mul(nW, -1);
+    // outer point: on the mid-plane and the wall's facing side (nW·X = t/2), on the sphere through the hub
+    const r = len(H);
+    const sols = unitsOnTwoPlanes(e.n, 0, nW, t / (2 * r)).map((u) => mul(u, r));
+    const outer = len(sub(sols[0], H)) < len(sub(sols[1], H)) ? sols[0] : sols[1];
+    return { hub, outer, nW, wallEdge: wall };
+  };
+
+  const boards = [];
+  edges.forEach((e, idx) => {
+    const live = e.faces.some((f) => full.keep[f]);
+    if (!live) return;
+    const tails = [tailAt(e, e.a, e.b), tailAt(e, e.b, e.a)];
+    const A = P[e.a], B = P[e.b], uAB = unit(sub(B, A));
+    const outerN = sub(A, mul(uAB, dot(A, uAB)));                 // outer plane: through the chord, normal to the mid-radius
+    tails.forEach((tl, i) => {
+      const d = sub(tails[1 - i].outer, tl.outer);
+      let eIn = unit(cross(e.n, tl.nW));
+      if (dot(sub(tl.outer, ORIGIN), eIn) > 0) eIn = mul(eIn, -1);
+      const cs = dot(eIn, d) / len(d), sn = Math.sqrt(Math.max(0, 1 - cs * cs));
+      tl.inner = add(tl.outer, mul(eIn, w / sn));
+      const k = unit(cross(tl.nW, outerN));
+      tl.walker = mul(k, (t / 2) / dot(e.n, k));                  // component along the mid-plane normal is +t/2
+    });
+    // Acidome's tail measurements and type key
+    const strs = [];
+    tails.forEach((tl, i) => {
+      const d = unit(sub(tails[1 - i].outer, tl.outer));
+      const hOI = mul(sub(tl.inner, tl.outer), 0.5);
+      tl.middle = add(tl.outer, hOI);
+      const walkers = [tl.walker, mul(tl.walker, -1)];
+      const direct = dot(cross(walkers[0], hOI), d) > 0;
+      let bs = [comp(walkers[direct ? 0 : 1], d), comp(walkers[direct ? 1 : 0], d)];
+      bs = bs.map((x) => (Math.abs(x * 50) < t / 2 ? 0 : x));
+      tl.bevelSides = bs;
+      tl.bevelZero = !bs[0] && !bs[1];
+      tl.bevelStraight = Math.abs(bs[0] + bs[1]) < 1e-9;
+      tl.bevelInner = comp(hOI, d);
+      const inner = Math.atan2(tl.bevelInner, w / 2), left = Math.atan2(bs[0], t / 2);
+      let st = !Math.round(inner * 500) ? 'T' : (inner < Math.PI / 2 ? 'A' : 'B') + au(Math.PI / 2 - inner);
+      if (tl.bevelZero) st += 'Piped';
+      else if (tl.bevelStraight) st += 'Joint/GoodKarma/Semicone' + (left > 0 ? 'L' : 'R') + au(Math.abs(left));
+      strs.push(st);
+    });
+    const mid = len(sub(tails[0].middle, tails[1].middle));
+    const extra = tails.reduce((s, tl) => s + Math.abs(tl.bevelSides[0]) + Math.abs(tl.bevelInner), 0);
+    boards.push({ edge: idx, a: e.a, b: e.b, tails, mid, maxL: mid + extra, minL: mid - extra, n: e.n, lineNormal: e.lineNormal,
+                  faces: e.faces, thirds: e.thirds,
+                  key: 'Length' + Math.round((mid + extra) * 1000) + ' ' + strs.slice().sort().join(' ') });
+  });
+
+  // board types: A = most numerous, then longer, then key descending
+  const byKey = new Map();
+  for (const bd of boards) { if (!byKey.has(bd.key)) byKey.set(bd.key, []); byKey.get(bd.key).push(bd); }
+  const boardTypes = acidomeNumbering(byKey, (bd) => bd.maxL).map(([k, members], i) => ({ index: i, label: typeLabel(i), key: k, members, rep: members[0] }));
+  for (const bt of boardTypes) for (const bd of bt.members) bd.type = bt;
+
+  // real face corners: where the two boards' mid-planes at a corner meet the sphere through the hub
+  const realCorner = (f, hub) => {
+    const [x, y, z] = full.tris[f];
+    const others = [x, y, z].filter((v) => v !== hub);
+    const n1 = edges[edgeAt.get(key(hub, others[0]))].n, n2 = edges[edgeAt.get(key(hub, others[1]))].n;
+    const u = unit(cross(n1, n2)), r = len(P[hub]);
+    const c1 = mul(u, r), c2 = mul(u, -r);
+    return len(sub(c1, P[hub])) < len(sub(c2, P[hub])) ? c1 : c2;
+  };
+  const reals = full.tris.map((tri, f) => tri.map((v) => realCorner(f, v)));
+
+  // hub types (Acidome's Connector.unify): around each live hub, clockwise from outside on the whole mesh,
+  // alternate the real face corner angle and the strut's angle to the centre; take the largest rotation
+  const liveHub = new Uint8Array(n), liveValence = new Int32Array(n);
+  full.tris.forEach((tri, f) => { if (full.keep[f]) for (const v of tri) liveHub[v] = 1; });
+  for (const bd of boards) { liveValence[bd.a]++; liveValence[bd.b]++; }
+  const byB = Array.from({ length: n }, () => new Map());          // our outward triangle (P, A, B): B -> [A, face]
+  full.tris.forEach(([x, y, z], f) => { byB[x].set(z, [y, f]); byB[y].set(x, [z, f]); byB[z].set(y, [x, f]); });
+  const hubKey = new Array(n);
+  for (let h = 0; h < n; h++) {
+    if (!liveHub[h]) continue;
+    const chain = [];
+    let [B0] = byB[h].keys(), Bk = B0;
+    for (let guard = 0; guard < 32; guard++) {
+      const [A, f] = byB[h].get(Bk);
+      const tri = full.tris[f], i = tri.indexOf(h), re = reals[f];
+      chain.push(['F', angleBetween(sub(re[(i + 2) % 3], re[i]), sub(re[(i + 1) % 3], re[i]))]);
+      chain.push(['R', angleBetween(sub(P[A], P[h]), sub(ORIGIN, P[h]))]);
+      Bk = A;
+      if (Bk === B0) break;
+    }
+    const rots = chain.map((_, i) => chain.slice(i).concat(chain.slice(0, i)));
+    hubKey[h] = 'Joint ' + largestChain(rots, 1e-6).map(([m, v]) => m + au(v)).join(' ');
+  }
+  const hubGroups = new Map();
+  for (let h = 0; h < n; h++) if (hubKey[h] !== undefined) { if (!hubGroups.has(hubKey[h])) hubGroups.set(hubKey[h], []); hubGroups.get(hubKey[h]).push(h); }
+  const hubTypes = acidomeNumbering(hubGroups).map(([k, hubs], i) => ({ no: i + 1, key: k, hubs, valence: liveValence[hubs[0]] }));
+  const hubNo = new Int32Array(n);
+  for (const ht of hubTypes) for (const h of ht.hubs) hubNo[h] = ht.no;
+
+  // face types (Acidome's Polygon.Simple.unify on the real triangle; mirror images merge for Joint)
+  const faceKey = reals.map((re) => {
+    const c = mul(add(add(re[0], re[1]), re[2]), 1 / 3);
+    const chain = [];
+    let prev = re[2];
+    for (const cur of re) {
+      chain.push(['R', len(sub(prev, c))], ['A', angleBetween(sub(cur, c), sub(prev, c))], ['L', 0]);
+      prev = cur;
+    }
+    const cands = [];
+    for (let i = 0; i < chain.length; i++) {
+      const sample = chain.slice(i).concat(chain.slice(0, i));
+      for (const seq of [sample, sample.slice().reverse()]) if (seq[0][0] === 'R') cands.push(seq.filter((x) => x[0] !== 'L'));
+    }
+    return largestChain(cands, 1e-5).map(([m, v]) => m + Math.round(v / 0.001)).join('-');
+  });
+  const faceGroups = new Map();
+  full.tris.forEach((tri, f) => { if (!full.keep[f]) return; if (!faceGroups.has(faceKey[f])) faceGroups.set(faceKey[f], []); faceGroups.get(faceKey[f]).push(f); });
+  const faceTypes = acidomeNumbering(faceGroups).map(([k, faces], i) => ({ no: i + 1, key: k, faces, rep: faces[0] }));
+
+  return { t, w, sigma, edges, boards, boardTypes, reals, hubTypes, hubNo, liveValence, faceTypes, P, tris: full.tris, keep: full.keep, edgeAt, key };
+}
+
+/* ---------- Board drawings (Acidome's front view: the outer face, seen from outside) ---------- */
+
+/** Everything printed on a board type's drawing, in board coordinates (x along the board from its
+    left extreme, y across the outer face from 0 to the thickness), lengths in metres. */
+function boardDrawing(bd, L) {
+  const h = L.t, depth = L.w, mid = bd.mid;
+  const t0 = bd.tails[0];
+  const off0 = Math.max(Math.abs(t0.bevelInner + t0.bevelSides[0]), Math.abs(t0.bevelInner + t0.bevelSides[1]));
+  const out = { length: bd.maxL, h, marks: [], cuts: [], blue: [], red: [], hubs: [], edges: { top: [], bottom: [] }, saw: [] };
+  const deg = (r) => r * 180 / Math.PI;
+  bd.tails.forEach((tl, idx) => {
+    const turn = idx === 1, TURN = turn ? -1 : 1, base = off0 + (turn ? mid : 0);
+    const b = tl.bevelInner, s = tl.bevelSides;
+    const oc = [base - TURN * b, h / 2], ic = [base + TURN * b, h / 2];
+    let outerAnchor = null, innerAnchor = null;
+    const mark = (x, anchor, edge, kind) => {
+      const f = x * 1000;
+      const label = anchor === null ? Math.round(f) : Math.round(anchor + Math.round(f - anchor));
+      out.marks.push({ x, label, edge, kind, side: turn ? 'right' : 'left' });
+      return f;
+    };
+    let blue = null, red = null;
+    for (let i = 0; i < 2; i++) {
+      const top = turn !== Boolean(i), y = top ? 0 : h;
+      const ob = [oc[0] + TURN * s[i], y], ib = [ic[0] + TURN * s[i], y];
+      if (tl.bevelStraight && Math.abs(s[0] - s[1]) > 1e-12) {
+        outerAnchor = mark(ob[0], outerAnchor, top ? 'top' : 'bottom', 'outer');
+        innerAnchor = mark(ib[0], innerAnchor, top ? 'top' : 'bottom', 'inner');
+      }
+      out.cuts.push({ from: oc, to: ob, hidden: false });
+      out.cuts.push({ from: ic, to: ib, hidden: (ic[0] > oc[0]) !== turn });
+      if (top) out.edges.top.push(ob[0]); else out.edges.bottom.push(ob[0]);
+      if ((!tl.bevelZero && tl.bevelStraight && (turn !== (ob[0] > oc[0]))) || (tl.bevelZero && i === 0)) {
+        const byOuter = [ob[0] - oc[0], ob[1] - oc[1], 0], toInner = [ic[0] - oc[0], ic[1] - oc[1], depth];
+        const nc = mul(cross(byOuter, toInner), i ? 1 : -1);
+        blue = Math.round(deg(angleBetween([0, 0, depth], nc)) * 10) / 10;
+        out.blue.push({ value: blue, from: oc, to: ob, side: turn ? 'right' : 'left' });
+      } else if (tl.bevelStraight && (!tl.bevelZero || i)) {
+        const sq = [ob[0], oc[1]];
+        const AB = Math.hypot(ob[0] - oc[0], ob[1] - oc[1]), BC = Math.hypot(sq[0] - ob[0], sq[1] - ob[1]), CA = Math.hypot(oc[0] - sq[0], oc[1] - sq[1]);
+        red = Math.round(deg(Math.acos(Math.max(-1, Math.min(1, (AB * AB + BC * BC - CA * CA) / (2 * AB * BC))))) * 5) / 5;
+        out.red.push({ value: red, at: ob, from: oc, side: turn ? 'right' : 'left' });
+      }
+    }
+    out.hubs.push({ at: oc, no: L.hubNo[tl.hub], spokes: L.liveValence[tl.hub] || 6, side: turn ? 'right' : 'left' });
+    // Saw settings for this end (my derivation from Acidome's numbers): outer face on the table, or a wide face
+    const m2 = Math.abs(2 * b / depth), sb = Math.abs(2 * s[0] / h);
+    out.saw.push({
+      side: turn ? 'right' : 'left', hub: L.hubNo[tl.hub],
+      outerDown: red === null || blue === null ? null : { miter: red, bevel: Math.round(Math.abs(90 - blue) * 10) / 10 },
+      sideDown: { miter: Math.round(deg(Math.atan(m2)) * 10) / 10, bevel: Math.round((90 - deg(Math.acos(sb / Math.sqrt(1 + sb * sb + m2 * m2)))) * 10) / 10 },
+    });
+  });
+  // black ∟: angle between each adjacent face's cover plane and the board's radial plane
+  out.faceAngles = bd.faces.map((f, k) => {
+    const re = L.reals[f], nf = cross(sub(re[0], re[1]), sub(re[2], re[1]));
+    let a = Math.round(deg(angleBetween(nf, bd.lineNormal)) / 0.1) / 10;
+    if (a > 90) a = Math.round((180 - a) * 10) / 10;
+    return { value: a, edge: dot(L.P[bd.thirds[k]], bd.lineNormal) <= 0 ? 'bottom' : 'top' };
+  });
+  return out;
+}
+
+/** The drawing as SVG. The middle of a long board is shortened so both ends show at true angles. */
+function boardSVG(bd, L, color) {
+  const D = boardDrawing(bd, L);
+  const W = 720, H = 210, mx = 46, my = 34;
+  const k = (H - 2 * my) / D.h;                                 // px per metre, same both ways
+  const gapPx = 34, endLen = Math.max(0.03, (W - 2 * mx - gapPx) / 2 / k);
+  const squeeze = D.length > 2 * endLen;
+  const X = (x) => {
+    if (!squeeze) return mx + x * k;
+    if (x <= endLen) return mx + x * k;
+    if (x >= D.length - endLen) return mx + endLen * k + gapPx + (x - (D.length - endLen)) * k;
+    return mx + endLen * k + (x - endLen) / (D.length - 2 * endLen) * gapPx;
+  };
+  const Y = (y) => my + y * k;
+  const width = squeeze ? 2 * mx + 2 * endLen * k + gapPx : 2 * mx + D.length * k;
+  const parts = [];
+  const line = (x1, y1, x2, y2, attrs) => parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" ${attrs}/>`);
+  const text = (x, y, s, attrs) => parts.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" ${attrs}>${s}</text>`);
+  // reference lines and thickness labels
+  line(mx - 14, Y(0), width - 6, Y(0), 'class="ref"');
+  line(mx - 14, Y(D.h), width - 6, Y(D.h), 'class="ref"');
+  text(4, Y(0) + 4, '0', 'class="lab"');
+  text(4, Y(D.h) + 4, String(Math.round(D.h * 1000)), 'class="lab"');
+  // division lines and marks
+  for (const m of D.marks) {
+    line(X(m.x), my - 22, X(m.x), Y(D.h) + 22, 'class="ref"');
+    const anchor = (m.kind === 'outer') === (m.side === 'left') ? 'end' : 'start';
+    const dx = anchor === 'end' ? -3 : 3;
+    text(X(m.x) + dx, m.edge === 'top' ? my - 8 : Y(D.h) + 18, String(m.label), `class="mark${m.kind === 'inner' ? ' inner' : ''}" text-anchor="${anchor}"`);
+  }
+  // long edges, broken in the shortened middle
+  const edge = (xs, y) => {
+    const [x1, x2] = [Math.min(...xs), Math.max(...xs)];
+    if (squeeze) {
+      line(X(x1), Y(y), X(endLen), Y(y), 'class="wood"');
+      line(X(D.length - endLen), Y(y), X(x2), Y(y), 'class="wood"');
+      line(X(endLen), Y(y), X(D.length - endLen), Y(y), 'class="gap"');
+    } else line(X(x1), Y(y), X(x2), Y(y), 'class="wood"');
+  };
+  edge(D.edges.top, 0);
+  edge(D.edges.bottom, D.h);
+  // end cuts: solid on the outer face, dashed where the inner face's cut is hidden behind it
+  for (const c of D.cuts) line(X(c.from[0]), Y(c.from[1]), X(c.to[0]), Y(c.to[1]), c.hidden ? 'class="cut hidden"' : 'class="cut"');
+  // angles
+  for (const a of D.blue) {
+    const q = a.side === 'left' ? 0.618 : 0.382;
+    const px = X(a.from[0] + (a.to[0] - a.from[0]) * q), py = Y(a.from[1] + (a.to[1] - a.from[1]) * q);
+    text(px + (a.side === 'left' ? -8 : 8), py + 4, `∟${a.value}°`, `class="blue" text-anchor="${a.side === 'left' ? 'end' : 'start'}"`);
+  }
+  for (const a of D.red) {
+    const px = X(a.at[0]), py = Y(a.at[1]);
+    text(px + (a.side === 'left' ? 10 : -10), py + (a.at[1] === 0 ? 16 : -8), `${a.value}°`, `class="red" text-anchor="${a.side === 'left' ? 'start' : 'end'}"`);
+  }
+  // hub circles, with one spoke per board at that hub
+  for (const hb of D.hubs) {
+    const cx = X(hb.at[0]), cy = Y(hb.at[1]), r = 11;
+    for (let i = 0; i < hb.spokes; i++) {
+      const ang = (i + 0.3) * 2 * Math.PI / hb.spokes;
+      line(cx + r * Math.cos(ang), cy + r * Math.sin(ang), cx + 2 * r * Math.cos(ang), cy + 2 * r * Math.sin(ang), 'class="spoke"');
+    }
+    parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" class="hubc"/>`);
+    text(cx, cy + 4, String(hb.no), 'class="hubn" text-anchor="middle"');
+  }
+  // panel angles along the edges, in the middle where there are no marks
+  const midX = squeeze ? (X(endLen) + X(D.length - endLen)) / 2 : X(D.length / 2);
+  for (const fa of D.faceAngles) text(midX, fa.edge === 'top' ? my - 8 : Y(D.h) + 18, `∟${fa.value}°`, 'class="face" text-anchor="middle"');
+  return `<svg class="board" viewBox="0 0 ${width.toFixed(0)} ${H}" width="${width.toFixed(0)}" style="--c:${color}" role="img"
+    aria-label="Board ${bd.type.label} cut drawing">${parts.join('')}</svg>`;
+}
+
+/* ---------- Panel openings between the boards ---------- */
+
+/** Solve three planes n·X = d. */
+function solve3(n1, d1, n2, d2, n3, d3) {
+  const c23 = cross(n2, n3), c31 = cross(n3, n1), c12 = cross(n1, n2), det = dot(n1, c23);
+  return add(add(mul(c23, d1 / det), mul(c31, d2 / det)), mul(c12, d3 / det));
+}
+
+/** A face's opening between the facing sides of its three boards: corner points at the outer face
+    (the plane through the hubs), at the inner face (one board width deeper), and shrunk by a gap. */
+function faceOpening(f, L, gap) {
+  const tri = L.tris[f], H = tri.map((v) => L.P[v]);
+  let nf = unit(cross(sub(H[1], H[0]), sub(H[2], H[0])));
+  if (dot(nf, H[0]) < 0) nf = mul(nf, -1);
+  const level = dot(nf, H[0]);
+  // side k is opposite corner k
+  const sides = [0, 1, 2].map((k) => {
+    const u = tri[(k + 1) % 3], v = tri[(k + 2) % 3], e = L.edges[L.edgeAt.get(L.key(u, v))];
+    const sgn = dot(e.n, H[k]) > 0 ? 1 : -1;
+    return { n: mul(e.n, sgn), u, v, board: L.boards.find((bd) => bd.edge === L.edgeAt.get(L.key(u, v))) };
+  });
+  const corners = (depth, g) => [0, 1, 2].map((k) => {
+    const a = sides[(k + 1) % 3], b = sides[(k + 2) % 3];
+    return solve3(a.n, L.t / 2 + g, b.n, L.t / 2 + g, nf, level - depth);
+  });
+  const lengths = (c) => [0, 1, 2].map((k) => len(sub(c[(k + 1) % 3], c[(k + 2) % 3])));
+  const angles = (c) => [0, 1, 2].map((k) => angleBetween(sub(c[(k + 1) % 3], c[k]), sub(c[(k + 2) % 3], c[k])) * 180 / Math.PI);
+  const outer = corners(0, 0), inner = corners(L.w, 0);
+  const real = L.reals[f];
+  return {
+    letters: sides.map((sd) => (sd.board && sd.board.type ? sd.board.type.label : '?')),
+    real: lengths(real), realAngles: angles(real),
+    outer: lengths(outer), outerAngles: angles(outer), inner: lengths(inner),
+    panel: gap > 0 ? lengths(corners(0, gap)) : null,
+  };
 }
 
 /* =========================================================================
@@ -943,9 +1366,14 @@ const DEFAULTS = {
   shape: 'sphere', r: 2.2, rx: 3, ry: 3, rz: 4.5, eggL: 6, eggB: 4.4, eggW: 0.08, eggTip: 'up',
   base: 'icosahedron', freq: 3, method: 'kruschke', sym: 'pentad', partial: '7/12', flat: false,
   panels: 'glass', showStruts: true, showHubs: true, colorTypes: true, spin: false,
-  tol: 1, conn: 'GoodKarma', beamW: 120, beamT: 40, upAxis: 'z', objLines: false,
+  tol: 1, frame: 'joint', beamW: 120, beamT: 40, gap: 0, upAxis: 'z', objLines: false,
 };
-const NUMERIC = new Set(['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'beamW', 'beamT']);
+const NUMERIC = new Set(['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'beamW', 'beamT', 'gap']);
+const FRAMES = {
+  joint: 'Acidome\u2019s Joint: hubless boards, each end cut against the side of the next board clockwise around the hub (seen from outside). Width runs along the radius; every board aims at the dome\u2019s centre.',
+  'joint-ccw': 'Joint turning the other way: each board butts into the next board anticlockwise around the hub.',
+  struts: 'Hub-to-hub struts only, for metal hubs or your own connectors. Lengths are centre to centre.',
+};
 const BOOLEAN = new Set(['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']);
 
 function readHash() {
@@ -961,6 +1389,10 @@ function readHash() {
   if (s.base !== 'octahedron') s.base = 'icosahedron';
   if (!SYMMETRY_OPTIONS.some((x) => x.v === s.sym)) s.sym = DEFAULTS.sym;
   s.freq = Math.min(12, Math.max(1, Math.round(s.freq)));
+  if (!FRAMES[s.frame]) s.frame = DEFAULTS.frame;
+  if (!(s.beamW > 0)) s.beamW = DEFAULTS.beamW;
+  if (!(s.beamT > 0)) s.beamT = DEFAULTS.beamT;
+  if (!(s.gap >= 0)) s.gap = 0;
   return s;
 }
 function writeHash() {
@@ -997,7 +1429,10 @@ function syncControls() {
   $('method').value = state.method;
   $('sym').innerHTML = SYMMETRY_OPTIONS.map((s) => `<option value="${s.v}">${s.label}${state.method === 'flat' && PY_NATIVE_SYM[state.base] === s.v ? ' (Python)' : ''}</option>`).join('');
   $('sym').value = state.sym;
-  $('conn').value = state.conn; $('beamW').value = state.beamW; $('beamT').value = state.beamT; $('upAxis').value = state.upAxis;
+  $('frame').value = state.frame; $('beamW').value = state.beamW; $('beamT').value = state.beamT; $('gap').value = state.gap; $('upAxis').value = state.upAxis;
+  $('frameHint').textContent = FRAMES[state.frame];
+  document.querySelectorAll('[data-lumber]').forEach((el) => { el.hidden = state.frame === 'struts'; });
+  $('tol').closest('.row').hidden = state.frame !== 'struts';
   $('methodHint').textContent = methodHint();
   $('methodHint').className = 'hint' + (methodWarning() ? ' warn' : '');
   const cur = parsePartial(effectivePartial(state)).value;
@@ -1041,11 +1476,13 @@ function wireControls() {
     const v = parseFloat(n.value); if (Number.isFinite(v) && v > 0) set({ [n.dataset.for]: v });
   }));
   for (const id of ['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']) $(id).addEventListener('change', () => set({ [id]: $(id).checked }));
-  for (const id of ['method', 'sym', 'conn', 'upAxis']) $(id).addEventListener('change', () => set({ [id]: $(id).value }));
+  for (const id of ['method', 'sym', 'frame', 'upAxis']) $(id).addEventListener('change', () => set({ [id]: $(id).value }));
   for (const id of ['beamW', 'beamT']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
+  $('gap').addEventListener('change', () => { const v = parseFloat($('gap').value); if (v >= 0) set({ gap: v }); });
   $('resetBtn').addEventListener('click', () => { state = { ...DEFAULTS }; pinned = false; lastSize = null; syncControls(); scheduleRebuild(); });
   $('dlObj').addEventListener('click', downloadObj);
   $('openSheet').addEventListener('click', openSheet);
+  $('dlBoards').addEventListener('click', () => { sheetModel(); downloadBoardsObj(); });
   $('sheetClose').addEventListener('click', closeSheet);
   $('sheetPrint').addEventListener('click', () => window.print());
   $('sheetCsv').addEventListener('click', sheetCsv);
@@ -1098,7 +1535,8 @@ const panelMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, flatSh
   polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 const strutMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 });
 const hubMat = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.2 });
-let panelMesh = null, strutMesh = null, hubMesh = null, grid = null;
+const boardMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.62, metalness: 0.02 });
+let panelMesh = null, strutMesh = null, hubMesh = null, boardMesh = null, grid = null;
 let current = null;
 let highlight = -1;
 let pinned = false;
@@ -1131,6 +1569,48 @@ function makeGrid() {
 
 function disposeMesh(m) { if (!m) return; model.remove(m); if (m.geometry !== unitCyl && m.geometry !== unitSphere) m.geometry.dispose(); if (m.dispose) m.dispose(); }
 
+/** A board's six faces as outward-facing quads, with a shade for each (outer face 1). */
+function boardQuads(bd) {
+    const [t0, t1] = bd.tails;
+    const c = (tl, inner, sgn) => add(inner ? tl.inner : tl.outer, mul(tl.walker, sgn));
+    const O0p = c(t0, 0, 1), O0m = c(t0, 0, -1), I0p = c(t0, 1, 1), I0m = c(t0, 1, -1);
+    const O1p = c(t1, 0, 1), O1m = c(t1, 0, -1), I1p = c(t1, 1, 1), I1m = c(t1, 1, -1);
+    const all = [O0p, O0m, I0p, I0m, O1p, O1m, I1p, I1m];
+    const centre = mul(all.reduce((a, b) => add(a, b), [0, 0, 0]), 1 / 8);
+    const quads = [
+      [[O0p, O0m, O1m, O1p], 1.0],   // outer face
+      [[I0p, I1p, I1m, I0m], 0.62],  // inner face
+      [[O0p, O1p, I1p, I0p], 0.5],   // side faces
+      [[O0m, I0m, I1m, O1m], 0.5],
+      [[O0p, I0p, I0m, O0m], 0.38],  // end cuts
+      [[O1p, O1m, I1m, I1p], 0.38],
+    ];
+    return quads.map(([q, f]) => {
+      const qc = mul(add(add(q[0], q[1]), add(q[2], q[3])), 0.25);
+      return [dot(cross(sub(q[1], q[0]), sub(q[2], q[0])), sub(qc, centre)) < 0 ? q.slice().reverse() : q, f];
+    });
+}
+
+/** All boards as one mesh: six faces per board, the outer face full colour and the rest shaded. */
+const BOARD_TRIS = 12;
+function buildBoardMesh(L) {
+  const pos = new Float32Array(L.boards.length * BOARD_TRIS * 9);
+  const shade = new Float32Array(L.boards.length * BOARD_TRIS * 3);
+  let v = 0;
+  L.boards.forEach((bd) => {
+    for (const [q, f] of boardQuads(bd)) {
+      for (const tri of [[q[0], q[1], q[2]], [q[0], q[2], q[3]]]) for (const pt of tri) { pos.set(pt, v * 3); shade[v] = f; v++; }
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(v * 3), 3));
+  g.computeVertexNormals();
+  const mesh = new THREE.Mesh(g, boardMat);
+  mesh.userData.shade = shade;
+  return mesh;
+}
+
 function rebuildScene() {
   const M = current;
   disposeMesh(panelMesh); disposeMesh(strutMesh); disposeMesh(hubMesh);
@@ -1148,6 +1628,9 @@ function rebuildScene() {
     panelMesh = new THREE.Mesh(g, panelMat);
     model.add(panelMesh);
   }
+
+  disposeMesh(boardMesh); boardMesh = null;
+  if (M.lumber) { boardMesh = buildBoardMesh(M.lumber); model.add(boardMesh); }
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
   const va = new THREE.Vector3(), vb = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3(), sc = new THREE.Vector3();
@@ -1181,7 +1664,25 @@ function rebuildScene() {
   applyVisibility();
 }
 
+function colorBoards() {
+  if (!boardMesh || !current || !current.lumber) return;
+  const L = current.lumber, shade = boardMesh.userData.shade, col = boardMesh.geometry.getAttribute('color');
+  const dim = new THREE.Color(cssVar('--stage')), wood = new THREE.Color('#c9a77c'), c = new THREE.Color(), k = new THREE.Color();
+  L.boards.forEach((bd, i) => {
+    c.set(state.colorTypes ? productColor(bd.type.index) : wood);
+    if (highlight >= 0 && bd.type.index !== highlight) c.lerp(dim, 0.82);
+    for (let j = 0; j < BOARD_TRIS * 3; j++) {
+      const v = i * BOARD_TRIS * 3 + j;
+      k.copy(c).multiplyScalar(shade[v]);
+      col.setXYZ(v, k.r, k.g, k.b);
+    }
+  });
+  col.needsUpdate = true;
+  document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
+}
+
 function colorStruts() {
+  if (current && current.lumber) return colorBoards();
   if (!strutMesh || !current) return;
   const n = current.groups.length;
   const base = new THREE.Color(cssVar('--hub'));
@@ -1205,8 +1706,10 @@ function applyVisibility() {
     panelMat.depthWrite = state.panels !== 'glass';
     panelMat.needsUpdate = true;
   }
-  if (strutMesh) strutMesh.visible = state.showStruts;
-  if (hubMesh) hubMesh.visible = state.showHubs;
+  const boards = !!(current && current.lumber);
+  if (strutMesh) strutMesh.visible = state.showStruts && !boards;
+  if (hubMesh) hubMesh.visible = state.showHubs && !boards;
+  if (boardMesh) boardMesh.visible = state.showStruts;
   if (controls) controls.autoRotate = state.spin;
 }
 
@@ -1258,8 +1761,22 @@ canvas.addEventListener('pointermove', (e) => {
   const r = canvas.getBoundingClientRect();
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
-  const hit = ray.intersectObject(strutMesh, false)[0];
   const tip = $('tip');
+  if (boardMesh && current.lumber) {
+    const bh = ray.intersectObject(boardMesh, false)[0];
+    if (bh) {
+      const L = current.lumber, bd = L.boards[Math.floor(bh.faceIndex / BOARD_TRIS)], bt = bd.type;
+      tip.textContent = `Board ${bt.label} · ${Math.round(bd.maxL * 1000)} mm overall · ${bt.members.length} of this type · hubs ${L.hubNo[bd.a]}–${L.hubNo[bd.b]}`;
+      tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
+      tip.hidden = false;
+      if (!pinned && highlight !== bt.index) { highlight = bt.index; colorStruts(); }
+    } else {
+      tip.hidden = true;
+      if (highlight !== -1 && !pinned) { highlight = -1; colorStruts(); }
+    }
+    return;
+  }
+  const hit = ray.intersectObject(strutMesh, false)[0];
   if (hit && hit.instanceId !== undefined) {
     const k = hit.instanceId, g = current.groups[current.groupOf[k]];
     tip.textContent = `Strut ${g.label} · ${fmtLen(current.lengths[k])} · ${g.count} of this type`;
@@ -1284,6 +1801,34 @@ function shapeTitle() {
   return `${state.freq}V ${m} ${state.base === 'octahedron' ? 'octa' : 'icosa'} ${what} · ${part}`;
 }
 
+function updateBoardPanels(M) {
+  const L = M.lumber, h = M.max[2] - M.min[2], w = Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]);
+  const total = L.boards.reduce((sum, bd) => sum + bd.maxL, 0);
+  $('hud').innerHTML = `
+    <div class="title">${shapeTitle()}</div>
+    <span class="k">Boards</span><span class="v">${L.boards.length}</span>
+    <span class="k">Board types</span><span class="v">${L.boardTypes.length}</span>
+    <span class="k">Hubs</span><span class="v">${M.pts.length}</span>
+    <span class="k">Panels</span><span class="v">${M.tris.length}</span>
+    <span class="k">Height</span><span class="v">${fmtM(h)}</span>
+    <span class="k">Width</span><span class="v">${fmtM(w)}</span>
+    <span class="k opt">Skin area</span><span class="v opt">${M.area.toFixed(2)} m²</span>
+    <span class="k opt">Lumber</span><span class="v opt">${total.toFixed(1)} m of ${state.beamW}×${state.beamT}</span>`;
+  $('strutTitle').textContent = 'Boards';
+  $('lenHead').textContent = 'Overall';
+  $('cfHead').textContent = 'Hubs';
+  $('strutRows').innerHTML = L.boardTypes.map((bt) => `
+    <tr data-g="${bt.index}">
+      <td><span class="sw" style="background:${productColor(bt.index)}"></span>${bt.label}</td>
+      <td class="n">${Math.round(bt.rep.maxL * 1000)} mm</td>
+      <td class="n">${L.hubNo[bt.rep.a]}–${L.hubNo[bt.rep.b]}</td>
+      <td class="n">${bt.members.length}</td>
+    </tr>`).join('');
+  $('strutHint').className = 'hint';
+  $('strutHint').textContent = 'Typed as Acidome does: same overall length to the millimetre and the same end cuts to 0.1°. A is the most numerous. Open the cut sheet for each type\u2019s cut drawing.';
+  $('hubLine').textContent = 'Hubs: ' + L.hubTypes.map((ht) => `${ht.hubs.length}× type ${ht.no} (${ht.valence} boards)`).join(' · ');
+}
+
 function updatePanels() {
   const M = current;
   const h = M.max[2] - M.min[2];
@@ -1301,6 +1846,9 @@ function updatePanels() {
     <span class="k opt">Volume</span><span class="v opt">${M.volume.toFixed(2)} m³</span>
     <span class="k opt">Total strut</span><span class="v opt">${M.totalLength.toFixed(1)} m</span>`;
 
+  if (M.lumber) { updateBoardPanels(M); $('pyCmd').textContent = pythonCommand(); return; }
+  $('strutTitle').textContent = 'Struts';
+  $('lenHead').textContent = 'Length';
   const isSphere = state.shape === 'sphere';
   $('cfHead').textContent = isSphere ? 'Chord' : 'Spread';
   $('strutRows').innerHTML = M.groups.map((g, k) => `
@@ -1318,55 +1866,7 @@ function updatePanels() {
   const hubs = Object.entries(M.hubs).sort((a, b) => a[0] - b[0]).map(([d, n]) => `${n}× ${d}-way`).join(' · ');
   $('hubLine').textContent = 'Hubs: ' + hubs;
 
-  const ah = acidomeHash();
-  $('acidomeHash').textContent = '#' + ah;
-  $('acidomeLocal').href = OFFLINE_ACIDOME + '#' + ah;
-  $('acidomeLocal').hidden = !offlineAcidome;
-  $('acidomeWeb').href = 'https://acidome.com/lab/calc/#' + ah;
-  $('acidomeHint').textContent = acidomeNotes().join(' ');
   $('pyCmd').textContent = pythonCommand();
-}
-
-/** The same dome as an Acidome URL hash. Acidome's router needs the tokens in exactly this order. */
-function acidomeHash() {
-  const parts = [];
-  const partial = acidomePartial();
-  const method = METHODS[effectiveMethod(state)].acidome;
-  if (state.base === 'octahedron') parts.push('Octohedron'); // the only spelling Acidome's code acts on
-  if (state.flat && partial !== '1/1' && partial !== '1/2') parts.push('Flat');
-  parts.push(partial);
-  if (method !== 'Chords') parts.push(method);
-  if (state.sym !== 'pentad') parts.push(state.sym[0].toUpperCase() + state.sym.slice(1));
-  parts.push(state.conn);
-  parts.push(`${state.freq}V`);
-  parts.push('R' + +acidomeRadius().toFixed(3));
-  parts.push(`beams_${Math.round(state.beamW)}x${Math.round(state.beamT)}`);
-  return parts.join('_');
-}
-function acidomeRadius() {
-  if (state.shape === 'ellipsoid') return Math.max(state.rx, state.ry);
-  if (state.shape === 'egg') return state.eggB / 2;
-  return state.r;
-}
-/** Acidome snaps the cut to the nearest fraction it offers for this base and frequency. */
-function acidomePartial() {
-  const v = parsePartial(state.partial).value;
-  return v >= 1 ? '1/1' : nearestAcidomePartial(state.base, state.freq, v);
-}
-function acidomeNotes() {
-  const notes = [];
-  if (state.shape !== 'sphere') notes.push(`Acidome only makes spheres, so this opens a sphere of radius ${+acidomeRadius().toFixed(3)} m.`);
-  else notes.push(offlineAcidome ? 'Opens the same dome in Acidome; the offline copy lives in vendor/acidome/.' : 'Opens the same dome on acidome.com.');
-  if (state.method === 'flat') notes.push('Acidome has no flat-grid method, so it shows the Chords version.');
-  if (Math.abs(parsePartial(acidomePartial()).value - parsePartial(effectivePartial(state)).value) > 1e-9) notes.push(`Acidome only offers whole-row fractions, so the cut becomes ${acidomePartial()}.`);
-  if ((state.method === 'arcs' || state.method === 'mexican') && state.freq <= 2) notes.push('Acidome offers Arcs and Mexican from 3V; at this frequency they equal Chords.');
-  if (state.flat) {
-    const p = acidomePartial();
-    if (p === '1/1' || p === '1/2') notes.push('Acidome never flattens a full sphere or a 1/2 dome.');
-    else if (effectiveMethod(state) === 'kruschke') notes.push('Acidome won’t flatten a Kruschke dome.');
-    else if (/^(Cone|Nose)/.test(state.conn)) notes.push('Acidome only flattens with Piped, Joint, GoodKarma or Semicone connectors.');
-  }
-  return notes;
 }
 
 /** The same dome from the Python package (python3 -m domez dome / from domez import ...), leaving out its defaults. */
@@ -1415,6 +1915,29 @@ function shapeLine() {
   if (state.shape === 'ellipsoid') return `# Shape: ellipsoid, radii X=${state.rx} m, Y=${state.ry} m, Z=${state.rz} m`;
   return `# Shape: sphere, radius ${state.r} m`;
 }
+/** Every board as a closed solid, grouped by board type (like Acidome's "Framework .obj"). */
+function downloadBoardsObj() {
+  const M = current, L = M.lumber;
+  if (!L) return;
+  const toOut = state.upAxis === 'y' ? (p) => [p[0], p[2], -p[1]] : (p) => p;
+  const lines = ['# DomeZ boards export (Joint)', shapeLine(),
+    `# Boards: ${L.boards.length} in ${L.boardTypes.length} types, ${state.beamW} x ${state.beamT} mm`,
+    `# Units: metres, up axis: ${state.upAxis.toUpperCase()}`, ''];
+  let base = 1;
+  for (const bt of L.boardTypes) {
+    lines.push(`g board_${bt.label}`);
+    for (const bd of bt.members) {
+      const quads = boardQuads(bd), verts = [], index = new Map();
+      const id = (pt) => { const k = pt.map((c) => c.toFixed(9)).join(','); if (!index.has(k)) { index.set(k, verts.length); verts.push(pt); } return index.get(k); };
+      const faces = quads.map(([q]) => q.map(id));
+      for (const pt of verts) { const o = toOut(pt); lines.push(`v ${o[0].toFixed(6)} ${o[1].toFixed(6)} ${o[2].toFixed(6)}`); }
+      for (const f of faces) lines.push('f ' + f.map((i) => i + base).join(' '));
+      base += verts.length;
+    }
+  }
+  download(baseName() + '_boards.obj', lines.join('\n') + '\n', 'model/obj');
+}
+
 function downloadObj() {
   const M = current;
   const toOut = state.upAxis === 'y' ? (p) => [p[0], p[2], -p[1]] : (p) => p;
@@ -1474,7 +1997,104 @@ function designFacts() {
   };
 }
 
+/** Boards around a hub, clockwise from outside, as type letters (only boards that are built). */
+function boardsAroundHub(L, h) {
+  const byB = new Map();
+  L.tris.forEach(([x, y, z]) => { if (x === h) byB.set(z, y); else if (y === h) byB.set(x, z); else if (z === h) byB.set(y, x); });
+  const [start] = byB.keys(), out = [];
+  for (let B = start, guard = 0; guard < 32; guard++) {
+    const A = byB.get(B), e = L.edgeAt.get(L.key(h, A)), bd = L.boards.find((x) => x.edge === e);
+    if (bd) out.push(bd.type.label);
+    B = A;
+    if (B === start) break;
+  }
+  return out;
+}
+
+function sawText(sw) {
+  return sw.outerDown ? `${sw.outerDown.miter}° miter, ${sw.outerDown.bevel}° bevel` : '';
+}
+
+function lumberSheetHTML() {
+  const M = current, L = M.lumber, d = designFacts();
+  const total = L.boards.reduce((sum, bd) => sum + bd.maxL, 0);
+  const facts = [['Connection', state.frame === 'joint-ccw' ? 'Joint, anticlockwise' : 'Joint, clockwise'],
+                 ['Boards', `${L.boards.length} in ${L.boardTypes.length} types`], ['Board size', `${state.beamW} × ${state.beamT} mm`],
+                 ['Lumber', total.toFixed(1) + ' m'], ['Hubs', `${M.pts.length} in ${L.hubTypes.length} types`],
+                 ['Panels', `${M.tris.length} in ${L.faceTypes.length} types`],
+                 ['Height', fmtM(M.max[2] - M.min[2])], ['Width', fmtM(Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]))]];
+  const boardRows = L.boardTypes.map((bt) => {
+    const D = boardDrawing(bt.rep, L);
+    return `<tr>
+      <td class="big"><span class="sw" style="background:${productColor(bt.index)}"></span>${bt.label}</td>
+      <td class="n big">${bt.members.length}</td>
+      <td class="n big">${Math.round(bt.rep.maxL * 1000)}</td>
+      <td class="n">${inchText(bt.rep.maxL)}</td>
+      <td class="n">${Math.round(bt.rep.minL * 1000)}</td>
+      <td class="n">${D.saw.map((sw) => sw.hub).join('–')}</td>
+      <td class="n">${sawText(D.saw[0])}</td>
+      <td class="n">${sawText(D.saw[1])}</td></tr>`;
+  }).join('');
+  const drawings = L.boardTypes.map((bt) => `
+    <div class="drawing">
+      <div class="drawing-head"><span class="dot" style="background:${productColor(bt.index)}">${bt.label}</span>
+        <b>${bt.members.length} pcs</b> · ${Math.round(bt.rep.maxL * 1000)} mm overall (${inchText(bt.rep.maxL)}) · hubs ${L.hubNo[bt.rep.a]}–${L.hubNo[bt.rep.b]}</div>
+      ${boardSVG(bt.rep, L, productColor(bt.index))}
+    </div>`).join('');
+  const hubRows = L.hubTypes.map((ht) => `<tr>
+      <td class="big"><span class="sw" style="background:${productColor(ht.no - 1)}"></span>${ht.no}</td>
+      <td class="n big">${ht.hubs.length}</td>
+      <td class="n">${ht.valence}</td>
+      <td class="seq">${boardsAroundHub(L, ht.hubs[0]).join(' ')}</td></tr>`).join('');
+  const gap = state.gap / 1000;
+  const mmList = (xs) => xs.map((x) => Math.round(x * 1000)).join(' · ');
+  const panelRows = L.faceTypes.map((ft) => {
+    const o = faceOpening(ft.rep, L, gap);
+    return `<tr>
+      <td class="big"><span class="sw" style="background:${productColor(ft.no - 1)}"></span>${ft.no}</td>
+      <td class="n big">${ft.faces.length}</td>
+      <td class="seq">${o.letters.join(' ')}</td>
+      <td class="n">${mmList(o.real)}</td>
+      <td class="n big">${mmList(o.outer)}</td>
+      <td class="n">${mmList(o.inner)}</td>
+      ${gap > 0 ? `<td class="n big">${mmList(o.panel)}</td>` : ''}
+      <td class="n">${o.outerAngles.map((a) => a.toFixed(1) + '°').join(' · ')}</td></tr>`;
+  }).join('');
+  return `
+    <h1>${esc(d.title)}</h1>
+    <p class="sub">${d.lines.filter(([k]) => k !== 'Strut grouping').map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')}</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+
+    <h2>Boards</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th class="n">Overall, mm</th><th class="n">Inches</th><th class="n">Shortest edge, mm</th><th class="n">Hubs</th><th class="n">Left end saw</th><th class="n">Right end saw</th></tr></thead>
+      <tbody>${boardRows}</tbody>
+    </table></div>
+    <p class="note">Overall is the board's length from its furthest corner to its furthest corner, the length to buy and rough-cut. Saw settings are for the outer face lying on the saw table: miter is the cut's angle from square across that face, bevel is the blade's tilt. The drawings below show which way each cut leans.</p>
+
+    <h2>Cut drawings</h2>
+    <p class="note">Each drawing is a board's outer face seen from outside the dome, its first hub on the left. Numbers along the top and bottom edges are millimetres from the left end: where the cut crosses that edge on the outer face, then on the inner face (the dashed line is the cut on the hidden inner face). <span class="blue-t">Blue ∟</span> is the angle inside the wood between the outer face and the cut (blade bevel = 90° − blue). <span class="red-t">Red</span> is the cut's angle from square on the outer face (the miter). Circles give the hub type at each end, with one spoke per board meeting there. Black ∟ is the angle between each neighbouring panel and the board's side. Long boards are drawn with their middle shortened.</p>
+    ${drawings}
+
+    <h2>Hubs</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th class="n">Boards</th><th>Board types around the hub (clockwise, seen from outside)</th></tr></thead>
+      <tbody>${hubRows}</tbody>
+    </table></div>
+    <p class="note">Joint has no hub hardware: the boards lock around each hub point as a pinwheel. Hub types are numbered as Acidome numbers them, so the circles on the drawings match.</p>
+
+    <h2>Panels</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th>Board sides</th><th class="n">Triangle, mm</th><th class="n">Opening, mm</th><th class="n">At inner face, mm</th>${gap > 0 ? `<th class="n">Panel, ${state.gap} mm gap</th>` : ''}<th class="n">Opening angles</th></tr></thead>
+      <tbody>${panelRows}</tbody>
+    </table></div>
+    <p class="note">Sides are listed in the same order in every column, labelled with the board type along them. The triangle is Acidome's face, between the boards' centre planes. The opening is the space between the facing sides of the three boards at their outer face, the size for a panel form. At the inner face, one board width deeper, it is smaller because the boards' sides lean toward the dome's centre. Set a panel gap under Frame to list panel sizes that leave that gap to every board.</p>
+
+    <p class="note link">Design link: ${esc(location.href)}</p>`;
+}
+
 function sheetHTML() {
+  if (current.lumber) return lumberSheetHTML();
   const M = current, d = designFacts(), n = M.groups.length;
   const endsText = (k) => M.strutEnds[k].map(([pair, c]) => `${pair}${M.strutEnds[k].length > 1 ? ` (${c})` : ''}`).join(', ');
   const strutRows = M.groups.map((g, k) => {
@@ -1528,8 +2148,39 @@ function sheetHTML() {
     <p class="note link">Design link: ${esc(location.href)}</p>`;
 }
 
+function lumberSheetRows() {
+  const M = current, L = M.lumber, d = designFacts();
+  const rows = [['DomeZ cut list', d.title], ...d.lines.filter(([k]) => k !== 'Strut grouping'),
+    ['Connection', state.frame === 'joint-ccw' ? 'Joint, anticlockwise' : 'Joint, clockwise'], ['Board size (mm)', `${state.beamW} x ${state.beamT}`],
+    ['Design link', location.href], []];
+  rows.push(['Boards'], ['Type', 'Quantity', 'Overall (mm)', 'Overall (in)', 'Shortest edge (mm)', 'Hub types', 'Left end miter', 'Left end bevel', 'Right end miter', 'Right end bevel',
+    'Top edge marks (mm)', 'Bottom edge marks (mm)']);
+  for (const bt of L.boardTypes) {
+    const D = boardDrawing(bt.rep, L);
+    const marks = (edge) => D.marks.filter((m) => m.edge === edge).sort((a, b) => a.x - b.x).map((m) => m.label).join(' ');
+    const sw = D.saw.map((x) => x.outerDown || { miter: '', bevel: '' });
+    rows.push([bt.label, bt.members.length, Math.round(bt.rep.maxL * 1000), inchText(bt.rep.maxL), Math.round(bt.rep.minL * 1000),
+      D.saw.map((x) => x.hub).join('–'), sw[0].miter, sw[0].bevel, sw[1].miter, sw[1].bevel, marks('top'), marks('bottom')]);
+  }
+  rows.push([], ['Hubs'], ['Type', 'Quantity', 'Boards', 'Board types around (clockwise from outside)']);
+  for (const ht of L.hubTypes) rows.push([ht.no, ht.hubs.length, ht.valence, boardsAroundHub(L, ht.hubs[0]).join(' ')]);
+  const gap = state.gap / 1000;
+  rows.push([], ['Panels'], ['Type', 'Quantity', 'Board sides', 'Triangle (mm)', 'Opening (mm)', 'At inner face (mm)', ...(gap > 0 ? [`Panel with ${state.gap} mm gap (mm)`] : []), 'Opening angles']);
+  for (const ft of L.faceTypes) {
+    const o = faceOpening(ft.rep, L, gap), mm = (xs) => xs.map((x) => Math.round(x * 1000)).join(' ');
+    rows.push([ft.no, ft.faces.length, o.letters.join(' '), mm(o.real), mm(o.outer), mm(o.inner), ...(gap > 0 ? [mm(o.panel)] : []), o.outerAngles.map((a) => a.toFixed(1)).join(' ')]);
+  }
+  rows.push([], ['Note', 'Saw settings are for the outer face on the saw table. Marks are mm from the left end of each board drawing.']);
+  return rows;
+}
+
 function sheetCsv() {
   const M = sheetModel(), d = designFacts();
+  if (M.lumber) {
+    const q = (v) => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    download(baseName() + '_cut_sheet.csv', '\ufeff' + lumberSheetRows().map((r) => r.map(q).join(',')).join('\n') + '\n', 'text/csv;charset=utf-8');
+    return;
+  }
   const q = (v) => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
   const rows = [['DomeZ cut list', d.title], ...d.lines, ['Design link', location.href], []];
   rows.push(['Summary'], ...d.facts, []);
@@ -1588,15 +2239,6 @@ window.addEventListener('hashchange', () => { const s = readHash(); if (JSON.str
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (current) applyTheme(); });
 new ResizeObserver(resize).observe(canvas);
 
-/* The offline Acidome copy only exists in a local checkout (vendor/ is git-ignored). When the page is
-   served over http(s), e.g. from GitHub Pages, check for it and hide its button if it isn't there. */
-const OFFLINE_ACIDOME = '../vendor/acidome/acidome-offline.html';
-let offlineAcidome = true;
-if (/^https?:$/.test(location.protocol)) {
-  const missing = () => { offlineAcidome = false; if (current) updatePanels(); };
-  fetch(OFFLINE_ACIDOME, { method: 'HEAD' }).then((r) => { if (!r.ok) missing(); }).catch(missing);
-}
-
 wireControls();
 syncControls();
 resize();
@@ -1604,7 +2246,7 @@ scheduleRebuild();
 loop();
 
 // Exposed for scripted checks against the Python generator.
-window.DomeZ = { buildModel, buildUnitGeodesic, acidomeHash, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
+window.DomeZ = { buildJointLumber, boardDrawing, faceOpening, buildModel, buildUnitGeodesic, acidomePartials, effectivePartial, METHODS, get state() { return state; }, set };
 </script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 # Web viewer
 
-`web/index.html` is a single-page 3D viewer for designing a dome, ellipsoid or egg and exporting it.
+`web/index.html` is a 3D viewer for designing a dome, ellipsoid or egg and exporting it. Its geometry, lumber, jig and sheet code lives in `web/js/`, loaded as plain scripts.
 
 - **Hosted:** [zacharyelston.github.io/DomeZ](https://zacharyelston.github.io/DomeZ/), published from `web/` by `.github/workflows/pages.yml` on every push to `main` that changes the viewer.
-- **Local:** open the file in any modern browser; there's no server or build step. It loads Three.js 0.160 from the jsDelivr CDN, so the first load needs a network connection.
+- **Local:** open the file in any modern browser; there's no server or build step, and it works straight from the folder (`file://`). It loads Three.js 0.160 from the jsDelivr CDN, so the first load needs a network connection.
 
 ```bash
 open web/index.html          # macOS; or double-click the file
@@ -113,6 +113,35 @@ The defaults match Acidome's own default dome (3V Kruschke, 7/12, radius 2.2 m).
 
 Example: `web/index.html#shape=egg&freq=5&method=mexican&partial=3%2F4&flat=1`
 
+## Code layout
+
+The page (`web/index.html`) holds the controls, the Three.js scene and the sheet dialog. Everything that computes something is in `web/js/`, one file per part. Each is a plain script that adds its functions to `window.DomeZ.<name>`, using only the parts loaded before it:
+
+| File | What it does |
+|---|---|
+| `vec.js` | 3-vector helpers |
+| `mesh.js` | edges, face neighbours, compaction, Acidome's line order |
+| `geodesic.js` | base solids; the flat grid and Acidome's Chords, Arcs, Mexican and Kruschke |
+| `cut.js` | partial fractions, Acidome's cut rules, the flat grid's cut, the flat base |
+| `shape.js` | sphere, ellipsoid and egg |
+| `types.js` | strut, hub and panel types (struts only) |
+| `lumber.js` | Acidome's Joint boards, board, hub and face types |
+| `model.js` | a design to its mesh, types and lumber (`buildModel`) |
+| `colors.js` | Acidome's palette and the strut-type colours |
+| `drawing.js` | board cut drawings |
+| `openings.js` | panel openings between the boards |
+| `jig.js` | V-cradles, end setups and the top views for the jig sheet |
+| `format.js` | number, inch, HTML and CSV formatting |
+| `state.js` | defaults and the URL query |
+| `sheets.js` | the cut sheet and jig sheet (HTML and CSV) |
+| `export.js` | OBJ exports, file names, the Python command |
+
+The sheet and export functions take the model, the design and the link (`cutSheetHTML(M, state, href)`), so they work outside the page too.
+
 ## For scripting
 
-The page exposes `window.DomeZ` (`buildModel`, `buildUnitGeodesic`, `acidomeHash`, `effectivePartial`, `set` and the current `state`) for checks from the browser console.
+From the browser console, `DomeZ.model.buildModel(DomeZ.state)` rebuilds the current design, `DomeZ.set({ freq: 4 })` changes it, and every other part is under `DomeZ.<file>`.
+
+## Tests
+
+`node --test 'tests/js/*.test.mjs'` runs the viewer's tests with Node 22 or newer, one file per part. They load the scripts the way the page does. `tests/js/fixtures/acidome-drawings.json` holds every label Acidome draws for 28 board types across six designs, and the drawing tests check ours against it. `tests/test_viewer_parity.py` checks that the viewer and the Python package build the same meshes, vertex for vertex.

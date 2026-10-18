@@ -6,6 +6,7 @@ over many directions, with a greedy overlap-avoiding fallback. No single
 direction is guaranteed to give an overlap-free net.
 """
 
+import argparse
 import numpy as np
 from pathlib import Path
 import heapq
@@ -598,15 +599,18 @@ def test_unfold(obj_file):
     return unfolded
 
 
-def main():
+def main(argv=None, prog=None):
     """Test on all Platonic solids"""
+    parser = argparse.ArgumentParser(prog=prog, description='Unfold every .obj file in a folder with steepest-edge cut trees and report each net')
+    parser.add_argument('-i', '--input-dir', default='polyhedra_output', help='folder of .obj files to read (default: polyhedra_output)')
+    args = parser.parse_args(argv)
     print("Steepest Edge Unfolding - Testing on Platonic Solids")
     print("="*60)
     
-    obj_files = sorted(Path('polyhedra_output').glob('*.obj'))
+    obj_files = sorted(Path(args.input_dir).glob('*.obj'))
     
     if not obj_files:
-        print("No OBJ files found in polyhedra_output/")
+        print(f"No OBJ files found in {args.input_dir}/")
         print("Run: python3 -m domez polyhedra --type all")
         return
     

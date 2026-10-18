@@ -4,27 +4,11 @@ Visualize unfolded Platonic solids as SVG images
 No external dependencies required
 """
 
+import argparse
 import numpy as np
 from pathlib import Path
 
-
-def load_obj(filename):
-    """Load vertices and faces from OBJ file"""
-    vertices = []
-    faces = []
-    
-    with open(filename, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith('v '):
-                parts = line.split()
-                vertices.append([float(parts[1]), float(parts[2]), float(parts[3])])
-            elif line.startswith('f '):
-                parts = line.split()
-                face = [int(p.split('/')[0]) - 1 for p in parts[1:]]
-                faces.append(face)
-    
-    return np.array(vertices), faces
+from .unfold import load_obj
 
 
 def unfold_simple(vertices, faces):
@@ -154,24 +138,28 @@ def visualize_unfold(obj_file, output_file):
     print(f"    {len(vertices)} vertices, {len(faces)} faces")
 
 
-def main():
+def main(argv=None, prog=None):
     """Generate SVG visualizations for all Platonic solids"""
+    parser = argparse.ArgumentParser(prog=prog, description="Draw each .obj file's faces as an SVG net")
+    parser.add_argument('-i', '--input-dir', default='polyhedra_output', help='folder of .obj files to read (default: polyhedra_output)')
+    parser.add_argument('-o', '--output-dir', default='unfold_visualizations', help='folder to write into (default: unfold_visualizations)')
+    args = parser.parse_args(argv)
     print("Geodesic Unfold Visualizer (SVG)")
     print("=" * 60)
     print()
     
     # Create output directory
-    output_dir = Path('unfold_visualizations')
-    output_dir.mkdir(exist_ok=True)
+    output_dir = Path(args.output_dir)
     
     # Find all OBJ files
-    obj_files = list(Path('polyhedra_output').glob('*.obj'))
+    obj_files = list(Path(args.input_dir).glob('*.obj'))
     
     if not obj_files:
-        print("No OBJ files found in polyhedra_output/")
+        print(f"No OBJ files found in {args.input_dir}/")
         print("Run: python3 -m domez polyhedra --type all")
         return
     
+    output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Found {len(obj_files)} polyhedra to visualize")
     print()
     

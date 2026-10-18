@@ -69,6 +69,13 @@ With Joint boards, the sidebar lists the board types as Acidome types them: the 
     - **Panels table:** each triangle type's quantity, side types, side lengths, corner angles and area. Mirror-image panels are one type.
 
   **Print** prints just the sheet. **Download CSV** saves the same tables (and, for boards, every drawing's marks) as a sectioned spreadsheet file.
+- **Jig sheet** (Joint): how to cut every board end on a plain miter saw that only miters (0° bevel, up to 45° either way).
+  - **The jig:** the board stands on its outer face in a **V-cradle** against the fence. A seat under the outer face rises toward the fence by the cradle's **lean**, and a back at 90° holds one wide face. Leaning the board turns each compound end cut into a plain vertical cut, so the saw only miters. A board can't lie flat for this, because a cradle only tilts a board about its length.
+  - **Cradles:** with up to 8 different leans, the sheet draws a cross-section of each fixed cradle to build, grouped to 0.5°. With more (eggs need dozens), it shows one adjustable cradle, hinged at the V and set with an angle gauge, plus the list of lean settings.
+  - **Boards in the jig:** a card per board type, like the cut sheet's: the board's cut drawing, then each end seen from above on the saw table. The top view shows the fence, the board in its cradle, the blade at its miter from square, the long point and the offcut, with that end's cradle, face, side of the blade, miter, length and no-jig settings beside it.
+  - **Cutting order:** two passes. Pass 1 cuts one end of every board from its rough length; pass 2 cuts the other end to length against a stop. Each pass is in order of lean, then miter. Each step names the cradle, which wide face goes on the back (as on the cut drawing), which side of the blade the end lands on, the miter and the side of its long point. Where a miter would pass 45°, a fence wedge (in 5° steps) covers the rest.
+  - **No-jig column:** the miter and blade bevel for the same end with the board flat on a wide face, for saws that tilt.
+  - The sheet gives the tallest cut and how far from the fence the board reaches, so you can check them against your saw.
 - **Copy link**: the viewer URL with the current settings.
 
 ### Python box

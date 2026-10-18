@@ -16,7 +16,7 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 | | |
 |---|---|
 | **Acidome Height+** (`tools/acidome_height.py`) | Builds a local copy of the Acidome calculator with **Height ×**, **Egg point** and **Panel gap** controls: Acidome's own tabs, Joint and other beam cut drawings and typing on taller, flatter or egg-shaped domes, plus each triangle's opening as panel form sizes ([details](docs/acidome.md#acidome-height)) |
-| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; Acidome's Joint timber frame with board types and cut drawings; a printable cut sheet (boards with saw settings, hubs, panel openings, plus CSV); OBJ and board exports; shareable links |
+| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; Acidome's Joint timber frame with board types and cut drawings; a printable cut sheet (boards with saw settings, hubs, panel openings, plus CSV); a jig sheet for cutting every board end on a miter-only saw; OBJ and board exports; shareable links |
 | **Python package** (`domez/`) | The same geometry as a library and command line, kept face-for-face identical to the viewer by tests |
 | **Unfolding** | Steepest-edge unfolding of meshes into flat nets, with SVG spec sheets |
 | **Rust prototype** (`geodesic-rs/`) | An early unfolder CLI; a candidate core for a shared engine |

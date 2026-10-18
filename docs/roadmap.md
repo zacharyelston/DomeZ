@@ -20,7 +20,7 @@ Two things drive the work:
 
 Acidome has five views: Base, Framework, Scheme, Cover and Tent. DomeZ provides them for spheres first, checked against acidome.com, and then for ellipsoids and eggs.
 
-1. **Framework: lumber cut drawings.** Done for Acidome's **Joint** (a hubless pinwheel of boards). The viewer shows the boards in 3D, types them as Acidome does and prints a cut drawing per board type with saw settings, matching acidome.com on spheres and Acidome Height+ on ellipsoids and eggs. Next: Acidome's other connections (GoodKarma, Piped, Cone, Semicone).
+1. **Framework: lumber cut drawings.** Done for Acidome's **Joint** (a hubless pinwheel of boards). The viewer shows the boards in 3D, types them as Acidome does and prints a cut drawing per board type with saw settings, matching acidome.com on spheres and Acidome Height+ on ellipsoids and eggs. A jig sheet turns every end into a plain miter cut, with the board leaning in a V-cradle. Next: Acidome's other connections (GoodKarma, Piped, Cone, Semicone).
 2. **Scheme: assembly map.** Every board labelled with its type letter and every hub and face with its number, printable.
 3. **Base: foundation layout.** Base ring lengths, centre-to-hub distances and anchor positions.
 4. **Cover: panels.** Panel types with their real dimensions inside the frame. A panel calculator for cast panels (core thickness, skins, volume, weight, batch count) aimed at MgO (Sorel) foam panels.

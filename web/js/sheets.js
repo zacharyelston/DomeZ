@@ -137,6 +137,7 @@ function lumberSheetHTML(M, s, href) {
 }
 
 function cutSheetHTML(M, s, href) {
+  if (M.gridshell) return gridshellSheetHTML(M, s, href);
   if (M.lumber) return lumberSheetHTML(M, s, href);
   const d = designFacts(M, s), n = M.groups.length;
   const endsText = (k) => M.strutEnds[k].map(([pair, c]) => `${pair}${M.strutEnds[k].length > 1 ? ` (${c})` : ''}`).join(', ');
@@ -316,6 +317,7 @@ function jigCsvRows(M, s, href) {
 
 /** The cut sheet as CSV rows: the boards for a Joint frame, otherwise struts, hubs and panels. */
 function cutSheetRows(M, s, href) {
+  if (M.gridshell) return gridshellSheetRows(M, s, href);
   if (M.lumber) return lumberSheetRows(M, s, href);
   const d = designFacts(M, s);
   const rows = [['DomeZ cut list', d.title], ...d.lines, ['Design link', href], []];
@@ -332,8 +334,67 @@ function cutSheetRows(M, s, href) {
   return rows;
 }
 
+/** A gridshell's facts, its bend verdict and its crossing rows, shared by the sheet and the CSV. */
+function gridshellParts(M, s) {
+  const G = M.gridshell, B = G.bend, mm = (m) => Math.round(m * 1000), deg = (r) => (r * 180 / Math.PI).toFixed(1) + '°';
+  const over = B.ratio > 1;
+  return {
+    G, B, mm, deg, over,
+    facts: [['Laths', `${2 * G.N} (${G.N} + ${G.N} mirrored)`], ['Lath length', `${mm(G.length)} mm`],
+            ['Section', `${B.width} × ${B.ply} mm, ${B.plies} ${B.plies === 1 ? 'ply' : 'plies'}`], ['Crossings', G.crossings],
+            ['Base ring', `Ø ${mm(2 * G.rhoBase)} mm`], ['Crown ring', `Ø ${mm(2 * G.c)} mm`], ['Crown height', `${mm(G.tCrown - G.tBase)} mm up`],
+            ['Tightest bend', `${B.minRadius.toFixed(2)} m`], ['Ply stress', `${B.maxStress.toFixed(1)} of ${B.allowable} MPa`],
+            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`]],
+    verdict: over
+      ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less, and more of them for the same section.`
+      : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), within the ${B.allowable} MPa allowed.`,
+    setOut: `Set out ${G.N} points evenly on the base ring, every ${(360 / G.N).toFixed(2)}°. From each point an A lath leaves leaning ${deg(G.psi)} from the vertical one way, and a B lath ${deg(G.psi)} the other way. A laths run in the outer layer and B laths in the inner layer. Each A lath crosses a B lath at every row of the table, where the two are bolted. Every lath ends on the crown ring, running level along it, having turned ${deg(G.crownTurn)} around the dome.`,
+  };
+}
+
+/** The gridshell sheet: the lath (every lath is the same; B laths are mirror images), where it crosses, and the bend check. */
+function gridshellSheetHTML(M, s, href) {
+  const d = designFacts(M, s);
+  if (!M.gridshell.ok) return `<h1>Gridshell · ${esc(d.title)}</h1><p class="sub">${esc(M.gridshell.reason)}</p>`;
+  const { G, mm, deg, over, facts, verdict, setOut } = gridshellParts(M, s);
+  const rows = G.nodes.map((n) => `<tr>
+      <td class="big">${n.k ? n.k : 'base'}</td>
+      <td class="n big">${mm(n.s)}</td>
+      <td class="n">${mm(n.rise)}</td>
+      <td class="n">${n.angle.toFixed(1)}°</td>
+      <td class="n">${Number.isFinite(n.radius) ? n.radius.toFixed(2) : '—'}</td></tr>`).join('');
+  return `
+    <h1>Gridshell · ${esc(d.title)}</h1>
+    <p class="sub">${d.lines.filter(([k]) => k === 'Shape' || k === 'Cut').map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')} &nbsp;·&nbsp; <b>Laths:</b> ${G.N} per family, leaving the base at ${deg(G.psi)} from the vertical</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+    <p class="note"${over ? ' style="color:var(--warn)"' : ''}>${esc(verdict)}</p>
+
+    <h2>The lath</h2>
+    <p class="note">Every lath has the same shape, so one drilling template marks them all. B laths are mirror images: turn the template over. Distances run along the lath's centre line from its base end.</p>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Crossing</th><th class="n">Along the lath, mm</th><th class="n">Height above base, mm</th><th class="n">Angle between laths</th><th class="n">Bend radius, m</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+
+    <h2>Setting out</h2>
+    <p class="note">${esc(setOut)}</p>
+    <p class="note">Prototype: this is geometry plus a simple bend check. The plies are taken as unglued, so each bends on its own thickness: stress = E × ply thickness ÷ (2 × bend radius). Twist, buckling, snow and wind loads, and the bolted crossings still need an engineer's check.</p>
+    <p class="note link">Design link: ${esc(href)}</p>`;
+}
+
+function gridshellSheetRows(M, s, href) {
+  const d = designFacts(M, s);
+  if (!M.gridshell.ok) return [['DomeZ gridshell', d.title], ['Note', M.gridshell.reason]];
+  const { G, mm, facts, verdict, setOut } = gridshellParts(M, s);
+  const rows = [['DomeZ gridshell', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, ['Bend check', verdict], []];
+  rows.push(['The lath (every lath the same; B laths mirrored)'], ['Crossing', 'Along the lath (mm)', 'Height above base (mm)', 'Angle between laths (deg)', 'Bend radius (m)']);
+  for (const n of G.nodes) rows.push([n.k ? n.k : 'base', mm(n.s), mm(n.rise), n.angle.toFixed(1), Number.isFinite(n.radius) ? n.radius.toFixed(2) : '']);
+  rows.push([], ['Setting out', setOut]);
+  return rows;
+}
+
 DomeZ.sheets = {
   sideText, faceText, shapeTitle, designFacts, boardsAroundHub, sawText, lumberSheetHTML, cutSheetHTML,
-  lumberSheetRows, cutSheetRows, jigSheetHTML, jigCsvRows,
+  lumberSheetRows, cutSheetRows, jigSheetHTML, jigCsvRows, gridshellSheetHTML, gridshellSheetRows,
 };
 })(globalThis.DomeZ = globalThis.DomeZ || {});

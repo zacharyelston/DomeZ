@@ -167,6 +167,44 @@
     .hud .opt { display: none; }
     .corner { right: 10px; top: 10px; }
   }
+
+  /* Cut sheet: a full-page dialog on screen, the only thing printed */
+  .sheet { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; }
+  .sheet-bar {
+    position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--line); z-index: 1;
+  }
+  .sheet-bar .sp { flex: 1; }
+  .sheet-body { max-width: 980px; margin: 0 auto; padding: 22px 20px 60px; }
+  .sheet-body h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sheet-body h2 { font-size: 15px; margin: 26px 0 8px; }
+  .sheet-body .sub { color: var(--muted); margin: 0 0 14px; }
+  .sheet-body .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 18px; margin: 10px 0 4px; }
+  .sheet-body .facts div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); padding: 3px 0; }
+  .sheet-body .facts span:first-child { color: var(--muted); }
+  .sheet-body .facts span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .sheet-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sheet-body th { text-align: left; color: var(--muted); font-weight: 500; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  .sheet-body td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .sheet-body td.n, .sheet-body th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sheet-body .big { font-size: 15px; font-weight: 650; }
+  .sheet-body .seq { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .sheet-body .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  .sheet-body .tag { display: inline-block; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+  .sheet-body .link { word-break: break-all; color: var(--muted); font-size: 12px; }
+  @media (max-width: 820px) {
+    .sheet-body { padding: 16px 16px 48px; }
+    .sheet-body .tablewrap-x { overflow-x: auto; }
+  }
+  @media print {
+    :root { color-scheme: light; --bg: #fff; --panel: #fff; --ink: #000; --muted: #555; --line: #ccc; }
+    body { background: #fff; }
+    .app, .sheet-bar { display: none !important; }
+    .sheet { position: static; overflow: visible; background: #fff; }
+    .sheet-body { max-width: none; padding: 0; }
+    .sheet-body h2 { break-after: avoid; }
+    .sheet-body tr { break-inside: avoid; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -279,7 +317,7 @@
       <label class="check"><input type="checkbox" id="objLines"> Include struts as OBJ lines</label>
       <div class="btns">
         <button class="btn primary" id="dlObj">Download OBJ</button>
-        <button class="btn" id="dlCsv">Cut list CSV</button>
+        <button class="btn" id="openSheet">Cut sheet</button>
         <button class="btn" id="copyLink">Copy link</button>
         <button class="btn" id="resetBtn">Reset</button>
       </div>
@@ -305,6 +343,16 @@
     <div class="tip" id="tip" hidden></div>
     <div class="err" id="err" hidden></div>
   </main>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Cut sheet">
+  <div class="sheet-bar">
+    <strong>Cut sheet</strong><span class="sp"></span>
+    <button class="btn" id="sheetPrint">Print</button>
+    <button class="btn" id="sheetCsv">Download CSV</button>
+    <button class="btn primary" id="sheetClose">Close</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
 </div>
 
 <script type="module">
@@ -793,6 +841,74 @@ function groupStruts(lengths, tolM) {
 }
 const typeLabel = (k) => { let s = ''; k++; while (k > 0) { k--; s = String.fromCharCode(65 + (k % 26)) + s; k = Math.floor(k / 26); } return s; };
 
+/** Number groups of items by count (most first), then by key. Returns [{ no, key, items }]. */
+function numberByCount(keyOf, n) {
+  const groups = new Map();
+  for (let i = 0; i < n; i++) { const k = keyOf(i); if (k === undefined) continue; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
+  return [...groups.entries()].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([key, items], i) => ({ no: i + 1, key, items }));
+}
+
+/** Hub and panel types for the cut sheet.
+    A hub's type is the sequence of strut types around it, read anticlockwise from outside (an open
+    fan for hubs on the cut edge). A panel's type is the strut types of its three sides; mirror-image
+    panels count as one type because a flat panel can be turned over. */
+function typeHubsAndPanels(pts, tris, edges, groupOf, groups) {
+  const n = pts.length;
+  const edgeIndex = new Map();
+  edges.forEach(([a, b], k) => edgeIndex.set(a * n + b, k));
+  const edgeOf = (a, b) => edgeIndex.get(a < b ? a * n + b : b * n + a);
+  const next = Array.from({ length: n }, () => new Map());   // around hub P: next[P].get(A) = B for outward triangle P, A, B
+  for (const [a, b, c] of tris) { next[a].set(b, c); next[b].set(c, a); next[c].set(a, b); }
+
+  const hubKey = new Array(n), hubInfo = new Array(n);
+  for (let p = 0; p < n; p++) {
+    const around = next[p];
+    if (!around.size) continue;
+    const ends = new Set(around.values());
+    let start = [...around.keys()].find((q) => !ends.has(q));
+    const open = start !== undefined;
+    if (!open) start = around.keys().next().value;
+    const order = [start];
+    for (let q = around.get(start); q !== undefined && q !== start; q = around.get(q)) order.push(q);
+    const letters = order.map((q) => groups[groupOf[edgeOf(p, q)]].label);
+    let seq = letters;
+    if (!open) {
+      let best = null;
+      for (let r = 0; r < letters.length; r++) {
+        const rot = letters.slice(r).concat(letters.slice(0, r));
+        if (best === null || rot.join('-') < best.join('-')) best = rot;
+      }
+      seq = best;
+    }
+    hubKey[p] = (open ? 'edge:' : 'ring:') + seq.join('-');
+    hubInfo[p] = { seq, open };
+  }
+  const hubTypes = numberByCount((p) => hubKey[p], n).map((t) => ({ ...t, ...hubInfo[t.items[0]], count: t.items.length }));
+  const hubNo = new Int32Array(n);
+  for (const t of hubTypes) for (const p of t.items) hubNo[p] = t.no;
+
+  // which hub types each strut type joins
+  const ends = groups.map(() => new Map());
+  edges.forEach(([a, b], k) => {
+    const pair = [hubNo[a], hubNo[b]].sort((x, y) => x - y).join('–');
+    const m = ends[groupOf[k]];
+    m.set(pair, (m.get(pair) || 0) + 1);
+  });
+  const strutEnds = ends.map((m) => [...m.entries()].sort((a, b) => b[1] - a[1]));
+
+  const panelSides = tris.map(([a, b, c]) => [[a, b], [b, c], [c, a]].map(([u, v]) => groupOf[edgeOf(u, v)]).sort((x, y) => x - y));
+  const panelTypes = numberByCount((i) => panelSides[i].map((g) => groups[g].label).join('-'), tris.length).map((t) => {
+    const sides = panelSides[t.items[0]].map((g) => ({ label: groups[g].label, len: groups[g].mean }));
+    const [x, y, z] = sides.map((sd) => sd.len);
+    const angle = (opp, u, v) => Math.acos(Math.max(-1, Math.min(1, (u * u + v * v - opp * opp) / (2 * u * v)))) * 180 / Math.PI;
+    const sp = (x + y + z) / 2;
+    return { ...t, count: t.items.length, sides, angles: [angle(x, y, z), angle(y, z, x), angle(z, x, y)],
+             area: Math.sqrt(Math.max(0, sp * (sp - x) * (sp - y) * (sp - z))) };
+  });
+  return { hubTypes, hubNo, strutEnds, panelTypes };
+}
+
 function buildModel(p) {
   const mesh = buildUnitGeodesic(p);
   const T = shapeTransform(p);
@@ -817,7 +933,7 @@ function buildModel(p) {
     vol += dot(sub(A, origin), cross(sub(B, origin), sub(C, origin))) / 6;
   }
   return { pts, tris, edges, lengths, groups, groupOf, hubs, min, max, area, volume: Math.abs(vol),
-           totalLength: lengths.reduce((s, l) => s + l, 0) };
+           totalLength: lengths.reduce((s, l) => s + l, 0), ...typeHubsAndPanels(pts, tris, edges, groupOf, groups) };
 }
 
 /* =========================================================================
@@ -929,7 +1045,11 @@ function wireControls() {
   for (const id of ['beamW', 'beamT']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
   $('resetBtn').addEventListener('click', () => { state = { ...DEFAULTS }; pinned = false; lastSize = null; syncControls(); scheduleRebuild(); });
   $('dlObj').addEventListener('click', downloadObj);
-  $('dlCsv').addEventListener('click', downloadCsv);
+  $('openSheet').addEventListener('click', openSheet);
+  $('sheetClose').addEventListener('click', closeSheet);
+  $('sheetPrint').addEventListener('click', () => window.print());
+  $('sheetCsv').addEventListener('click', sheetCsv);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
   $('copyLink').addEventListener('click', async () => {
     writeHash();
     try { await navigator.clipboard.writeText(location.href); flash($('copyLink'), 'Copied'); }
@@ -1317,15 +1437,125 @@ function downloadObj() {
   if (state.objLines) { lines.push(''); for (const [a, b] of M.edges) lines.push(`l ${a + 1} ${b + 1}`); }
   download(baseName() + '.obj', lines.join('\n') + '\n', 'model/obj');
 }
-function downloadCsv() {
-  const M = current;
-  const rows = [['type', 'length_m', 'min_m', 'max_m', 'count']];
-  for (const g of M.groups) rows.push([g.label, g.mean.toFixed(6), g.min.toFixed(6), g.max.toFixed(6), g.count]);
-  rows.push([]);
-  rows.push(['hub_valence', 'count']);
-  for (const [d, n] of Object.entries(M.hubs)) rows.push([d, n]);
-  download(baseName() + '_cutlist.csv', rows.map((r) => r.join(',')).join('\n') + '\n', 'text/csv');
+/* ---------- Cut sheet ---------- */
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const mmText = (m) => String(Math.round(m * 1000));
+/** Metres to inches, to the nearest 1/16". */
+function inchText(m) {
+  const sixteenths = Math.round(m / 0.0254 * 16);
+  const whole = Math.floor(sixteenths / 16);
+  let num = sixteenths % 16, den = 16;
+  if (!num) return `${whole}"`;
+  while (num % 2 === 0) { num /= 2; den /= 2; }
+  return `${whole} ${num}/${den}"`;
 }
+
+/** The design, as [label, value] lines for the sheet header. */
+function designFacts() {
+  const M = current;
+  const shape = state.shape === 'egg'
+    ? `Egg, ${state.eggL} m long × ${state.eggB} m wide, ${Math.round(state.eggW * 100)}% point ${state.eggTip}`
+    : state.shape === 'ellipsoid' ? `Ellipsoid, radii ${state.rx} × ${state.ry} × ${state.rz} m (X × Y × Z)` : `Sphere, radius ${state.r} m`;
+  const cut = fracText(effectivePartial(state));
+  return {
+    title: shapeTitle(),
+    lines: [
+      ['Shape', shape],
+      ['Geodesic', `${state.freq}V ${state.base}, ${METHODS[effectiveMethod(state)].label}, ${state.sym[0].toUpperCase() + state.sym.slice(1)}`],
+      ['Cut', (cut === '1/1' ? 'full sphere' : cut + ' of the sphere') + (state.flat ? ', flat base' : '')],
+      ['Strut grouping', state.tol > 0 ? `lengths within ${state.tol} mm are one type` : 'every distinct length is a type'],
+    ],
+    facts: [
+      ['Struts', M.edges.length], ['Strut types', M.groups.length], ['Hubs', M.pts.length], ['Hub types', M.hubTypes.length],
+      ['Panels', M.tris.length], ['Panel types', M.panelTypes.length],
+      ['Height', fmtM(M.max[2] - M.min[2])], ['Width', fmtM(Math.max(M.max[0] - M.min[0], M.max[1] - M.min[1]))],
+      ['Total strut length', M.totalLength.toFixed(1) + ' m'], ['Skin area', M.area.toFixed(2) + ' m²'],
+    ],
+  };
+}
+
+function sheetHTML() {
+  const M = current, d = designFacts(), n = M.groups.length;
+  const endsText = (k) => M.strutEnds[k].map(([pair, c]) => `${pair}${M.strutEnds[k].length > 1 ? ` (${c})` : ''}`).join(', ');
+  const strutRows = M.groups.map((g, k) => {
+    const spread = g.max - g.min >= 0.0005 ? `${mmText(g.min)}–${mmText(g.max)}` : '';
+    return `<tr>
+      <td class="big"><span class="sw" style="background:${typeColor(k, n)}"></span>${g.label}</td>
+      <td class="n big">${g.count}</td>
+      <td class="n big">${mmText(g.mean)}</td>
+      <td class="n">${inchText(g.mean)}</td>
+      <td class="n">${spread}</td>
+      <td>${esc(endsText(k))}</td></tr>`;
+  }).join('');
+  const hubRows = M.hubTypes.map((t) => `<tr>
+      <td class="big">${t.no}${t.open ? '<span class="tag">cut edge</span>' : ''}</td>
+      <td class="n big">${t.count}</td>
+      <td class="n">${t.seq.length}</td>
+      <td class="seq">${t.seq.join(' ')}</td></tr>`).join('');
+  const panelRows = M.panelTypes.map((t) => `<tr>
+      <td class="big">${t.no}</td>
+      <td class="n big">${t.count}</td>
+      <td class="seq">${t.sides.map((sd) => sd.label).join(' ')}</td>
+      <td class="n">${t.sides.map((sd) => mmText(sd.len)).join(' · ')}</td>
+      <td class="n">${t.sides.map((sd) => inchText(sd.len)).join(' · ')}</td>
+      <td class="n">${t.angles.map((a) => a.toFixed(1) + '°').join(' · ')}</td>
+      <td class="n">${t.area.toFixed(3)}</td></tr>`).join('');
+  return `
+    <h1>${esc(d.title)}</h1>
+    <p class="sub">${d.lines.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')}</p>
+    <div class="facts">${d.facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+
+    <h2>Struts</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th class="n">Length, mm</th><th class="n">Inches</th><th class="n">Range, mm</th><th>Joins hubs</th></tr></thead>
+      <tbody>${strutRows}</tbody>
+    </table></div>
+    <p class="note">Lengths are centre to centre, hub point to hub point. Take off your connector's allowance at each end to get the cut length. "Joins hubs" gives the hub types at the two ends (with counts when a type joins more than one pair).</p>
+
+    <h2>Hubs</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th class="n">Struts</th><th>Strut types around the hub (anticlockwise, seen from outside)</th></tr></thead>
+      <tbody>${hubRows}</tbody>
+    </table></div>
+
+    <h2>Panels</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Type</th><th class="n">Qty</th><th>Sides</th><th class="n">Side lengths, mm</th><th class="n">Inches</th><th class="n">Corner angles</th><th class="n">Area, m²</th></tr></thead>
+      <tbody>${panelRows}</tbody>
+    </table></div>
+    <p class="note">Panel sides are the triangle between hub points, listed in the same order as their strut types; each corner angle is opposite the side in the same position. Mirror-image panels are one type, since a flat panel or form can be turned over. For lumber frames, the opening between the boards is smaller by the board size. Acidome Height+ gives those sizes and the board cut drawings until this viewer has its own lumber view.</p>
+
+    <p class="note link">Design link: ${esc(location.href)}</p>`;
+}
+
+function sheetCsv() {
+  const M = sheetModel(), d = designFacts();
+  const q = (v) => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const rows = [['DomeZ cut list', d.title], ...d.lines, ['Design link', location.href], []];
+  rows.push(['Summary'], ...d.facts, []);
+  rows.push(['Struts'], ['Type', 'Quantity', 'Length (mm)', 'Length (in)', 'Shortest (mm)', 'Longest (mm)', 'Joins hub types']);
+  M.groups.forEach((g, k) => rows.push([g.label, g.count, mmText(g.mean), inchText(g.mean), mmText(g.min), mmText(g.max),
+    M.strutEnds[k].map(([pair, c]) => `${pair} (${c})`).join('; ')]));
+  rows.push([], ['Hubs'], ['Type', 'Quantity', 'Struts', 'Strut types around (anticlockwise from outside)', 'On the cut edge']);
+  for (const t of M.hubTypes) rows.push([t.no, t.count, t.seq.length, t.seq.join(' '), t.open ? 'yes' : 'no']);
+  rows.push([], ['Panels'], ['Type', 'Quantity', 'Side types', 'Side 1 (mm)', 'Side 2 (mm)', 'Side 3 (mm)', 'Angle 1', 'Angle 2', 'Angle 3', 'Area (m²)']);
+  for (const t of M.panelTypes) rows.push([t.no, t.count, t.sides.map((sd) => sd.label).join(' '), ...t.sides.map((sd) => mmText(sd.len)),
+    ...t.angles.map((a) => a.toFixed(1)), t.area.toFixed(3)]);
+  rows.push([], ['Note', 'Lengths are centre to centre between hub points; take off your connector allowance at each end for cut lengths.']);
+  // A byte-order mark so spreadsheet apps read ×, ², – and inch marks as UTF-8
+  download(baseName() + '_cut_sheet.csv', '\ufeff' + rows.map((r) => r.map(q).join(',')).join('\n') + '\n', 'text/csv;charset=utf-8');
+}
+
+/** The model behind the sheet; built here if the first frame hasn't run yet (e.g. a background tab). */
+function sheetModel() { if (!current) current = buildModel(state); return current; }
+
+function openSheet() {
+  sheetModel();
+  $('sheetBody').innerHTML = sheetHTML();
+  $('sheet').hidden = false;
+  $('sheetClose').focus();
+}
+function closeSheet() { $('sheet').hidden = true; $('openSheet').focus(); }
 
 /* =========================================================================
    Main loop

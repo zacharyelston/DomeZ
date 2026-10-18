@@ -16,7 +16,7 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 | | |
 |---|---|
 | **Acidome Height+** (`tools/acidome_height.py`) | Builds a local copy of the Acidome calculator with **Height ×**, **Egg point** and **Panel gap** controls: Acidome's own tabs, Joint and other beam cut drawings and typing on taller, flatter or egg-shaped domes, plus each triangle's opening as panel form sizes ([details](docs/acidome.md#acidome-height)) |
-| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; strut and hub tables; OBJ and cut-list export; shareable links |
+| **Web viewer** (`web/index.html`) | Interactive 3D design: sphere, ellipsoid or egg; Acidome's Chords, Arcs, Mexican and Kruschke methods; row cuts and flat base; strut and hub tables; a printable cut sheet (struts, hubs and panel triangles in mm and inches, plus CSV); OBJ export; shareable links |
 | **Python package** (`domez/`) | The same geometry as a library and command line, kept face-for-face identical to the viewer by tests |
 | **Unfolding** | Steepest-edge unfolding of meshes into flat nets, with SVG spec sheets |
 | **Rust prototype** (`geodesic-rs/`) | An early unfolder CLI; a candidate core for a shared engine |
@@ -29,7 +29,7 @@ DomeZ re-implements the geometry of the [Acidome](https://acidome.com/lab/calc/)
 open web/index.html
 ```
 
-Pick a shape, frequency, method and cut, then download the OBJ or cut list. For example, a [5V Mexican egg cut at 3/4 and standing flat](https://zacharyelston.github.io/DomeZ/#shape=egg&freq=5&method=mexican&partial=3%2F4&flat=1).
+Pick a shape, frequency, method and cut, then print the cut sheet or download the OBJ. For example, a [5V Mexican egg cut at 3/4 and standing flat](https://zacharyelston.github.io/DomeZ/#shape=egg&freq=5&method=mexican&partial=3%2F4&flat=1).
 
 **Acidome Height+.** Download "Acidome offline" from [acidome.com](https://acidome.com/lab/calc/) into `vendor/acidome/acidome-offline.html`, then:
 
@@ -62,7 +62,7 @@ The viewer's **Python** box prints the command or snippet for whatever you've de
 |---|---|
 | Acidome Chords, Arcs, Mexican and Kruschke; Pentad/Cross/Triad; row cuts; flat base | ✓ Matches acidome.com in 13 checked configurations ([details](docs/acidome.md)) |
 | Ellipsoids and Hügelschäffer eggs | ✓ Viewer and Python |
-| Strut and hub types, OBJ, cut-list CSV | ✓ |
+| Strut, hub and panel types; printable cut sheet and CSV; OBJ | ✓ |
 | Flat nets by steepest-edge unfolding | ✓ Platonic solids and 3V domes |
 | Acidome's tabs and lumber cut drawings on stretched and egg domes, with panel form sizes | ✓ Acidome Height+ (local patch of your Acidome copy) |
 | Framework: lumber cut drawings in the DomeZ viewer, for eggs | Next |

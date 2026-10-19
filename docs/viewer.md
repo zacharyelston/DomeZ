@@ -45,15 +45,20 @@ Every shape is built on a unit sphere and then stretched, so the cut and the hub
 
 A timber gridshell is a lattice of long, thin laths bent elastically into shape and bolted where they cross, like Frei Otto's Mannheim Multihalle or the Downland Gridshell. Here each lath lies flat on the skin and follows a geodesic line, the straightest path on the surface. Along a geodesic a flat lath only bends the easy way, about its thin side, never edgewise.
 
-- **How the laths run:**
-  - The shape must be round in plan: a sphere, an egg, or an ellipsoid with equal X and Y radii. On such a surface every lath that leaves the base ring at the same angle has the same shape (Clairaut's rule: distance from the axis × sine of the angle to the vertical stays constant).
-  - Family A turns one way and family B mirrors it. A laths lie in the outer layer and B laths in the inner layer, and they are bolted at every crossing.
-  - Each lath climbs to a crown ring, where it runs level. The ring's radius is the base radius × sine of the lath angle, so steeper laths leave a smaller opening at the top.
-- **Laths:** the number per family, and their angle from the vertical at the base.
+- **Layout:** how the laths run.
+  - **Crown ring** (round plans: a sphere, an egg, or an ellipsoid with equal X and Y radii). Laths leave N evenly spaced points on the base ring and climb to a crown ring, where they run level. On a surface of revolution every lath that leaves the base at the same angle has the same shape (Clairaut's rule: distance from the axis × sine of the angle to the vertical stays constant), so every lath is the same. The ring's radius is the base radius × sine of the lath angle, so steeper laths leave a smaller opening at the top.
+  - **Over the top** (any shape, and the only layout for a long plan). The ridge is the line over the top along the plan's long axis, from base to base. Laths cross it at even spacing, at the lath angle from the fall line there, and run down both sides to the base, like the Downland Gridshell's diagonal grid. Near the ends the shell curves more tightly and laths of one family converge. Where two would cross, the one that has run further from the ridge stops on the other and is bolted to it, so no lath ever crosses its own family. No two laths are quite alike: laths with the same length and the same crossing marks, to the millimetre and read from either end, share a type and a drilling template. A lath, the lath opposite it (turned 180°) and their two mirror images make one type.
+  - Either way, family A turns one way and family B mirrors it. A laths lie in the outer layer and B laths in the inner layer, and they are bolted at every crossing.
+  - The laths are traced on the surface itself, x²/a² + y²/b² = g(z), by integrating the geodesic equation; on round shapes this agrees with the Clairaut solution to a fraction of a micrometre.
+- **Laths:** the number per family, and their angle from the fall line: at the base ring (crown) or where they cross the ridge (over the top).
 - **Lath (mm):** width × ply thickness × plies. Plies are stacked and bolted, not glued, so each bends on its own thickness.
 - **Timber:** bending stiffness E (GPa) and the allowable bending stress (MPa). The bend check compares E × ply thickness ÷ (2 × tightest bend radius) with that limit, and gives the thickest safe ply.
+- **Stock:** the length of the stock laths (2438 mm is 8 ft, 1829 mm is 6 ft) and the price of one. Each ply is laid end to end from stock. Ply 1 starts with a whole length and each further ply with a shorter piece, so the joints in neighbouring plies are staggered and each is bridged by the other plies; a single ply needs a splice plate at each joint. A joint that would land within 100 mm (or twice the lath width) of a crossing bolt moves back until it is clear, and no end piece is shorter than a quarter length (at most 600 mm). The cut pieces are packed into stock lengths, largest first, with a 3 mm kerf, to count the lengths to buy and their cost.
 
-The 3D view shows the laths as ribbons on their two layers, a bolt at each crossing, and the base and crown rings. The cut sheet becomes a gridshell sheet. Every lath is the same, so it gives one table of crossings: distance along the lath, height, the angle between the laths, and the bend radius there. One drilling template therefore serves every lath, turned over for family B.
+The 3D view shows the laths as ribbons on their two layers, a bolt at each crossing, a pale band at each joint, and the base outline with the crown ring or the ridge. Hovering a lath names it, with its type, length, crossings and joints, and highlights its type. The cut sheet becomes a gridshell sheet:
+
+- **Crown:** every lath is the same, so it gives one table of crossings (distance along the lath, height, the angle between the laths, and the bend radius there) and one table of joints for each ply. One drilling template serves every lath, turned over for family B.
+- **Over the top:** a crossing table and a joints table for each lath type, then a setting-out table: for each lath, its type, where it crosses the ridge, and its two ends, either on the base (X and Y from the centre) or on the lath of its own family it stops on.
 
 Not yet covered: covering the opening above the crown ring, twist and buckling checks, loads, and laths that start at different angles.
 
@@ -124,10 +129,12 @@ Only values that differ from the defaults are written to the hash.
 | `showStruts`, `showHubs`, `colorTypes`, `spin` | `1`, `1`, `1`, `0` | display toggles |
 | `upAxis` | `z` | OBJ up axis, `z` or `y` |
 | `objLines` | `0` | `1` adds struts as OBJ lines |
+| `lathLayout` | `crown` | gridshell: `crown` (round plans) or `over` (over the top; other plans always use it) |
 | `lathN` | `20` | gridshell: laths per family (3–120) |
-| `lathAngle` | `30` | gridshell: lath angle from the vertical at the base, degrees (2–80) |
+| `lathAngle` | `30` | gridshell: lath angle from the fall line at the base ring or the ridge, degrees (2–80) |
 | `lathW`, `lathT`, `lathPlies` | `50`, `12`, `2` | gridshell: lath width and ply thickness (mm), plies per lath |
 | `lathE`, `lathFb` | `10`, `20` | gridshell: E (GPa) and allowable bending stress (MPa) |
+| `lathStock`, `lathPrice` | `2438`, `2.5` | gridshell: stock lath length (mm) and price of one length |
 
 The defaults match Acidome's own default dome (3V Kruschke, 7/12, radius 2.2 m).
 
@@ -151,7 +158,7 @@ The page (`web/index.html`) holds the controls, the Three.js scene and the sheet
 | `drawing.js` | board cut drawings |
 | `openings.js` | panel openings between the boards |
 | `jig.js` | V-cradles, end setups and the top views for the jig sheet |
-| `gridshell.js` | geodesic laths on round shapes, their crossings and the bend check |
+| `gridshell.js` | geodesic laths (crown ring on round shapes, over the top on any shape), their crossings, types and splices, and the bend check |
 | `format.js` | number, inch, HTML and CSV formatting |
 | `state.js` | defaults and the URL query |
 | `sheets.js` | the cut sheet and jig sheet (HTML and CSV) |

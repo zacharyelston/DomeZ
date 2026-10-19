@@ -104,6 +104,7 @@
     padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap;
   }
   .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+  .seg button:disabled { opacity: 0.45; cursor: not-allowed; }
   .pair { display: flex; gap: 6px; align-items: center; }
   .pair input { width: 100%; background: var(--field); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; text-align: right; }
   .pair span { color: var(--muted); }
@@ -365,13 +366,16 @@
       <div class="row two" data-lumber><label for="gap">Panel gap (mm)</label>
         <div class="pair"><input type="number" id="gap" min="0" step="1" title="Gap between a cast panel and the boards around it"><span></span><span></span></div>
       </div>
+      <div class="row two" data-gridshell><label>Layout</label>
+        <div class="seg" data-key="lathLayout"><button data-v="crown" title="From the base ring up to a crown ring, every lath alike (round plans)">Crown ring</button><button data-v="over" title="From base to base over the top, crossing the ridge at even spacing (any shape)">Over the top</button></div>
+      </div>
       <div class="row" data-gridshell><label for="lathN">Laths</label><input type="range" id="lathN" min="6" max="60" step="1" aria-label="Laths per family"><output data-for="lathN"></output></div>
-      <div class="row" data-gridshell><label for="lathAngle">Lath angle</label><input type="range" id="lathAngle" min="5" max="75" step="0.5" aria-label="Angle from the vertical at the base"><output data-for="lathAngle"></output></div>
+      <div class="row" data-gridshell><label for="lathAngle">Lath angle</label><input type="range" id="lathAngle" min="5" max="75" step="0.5" aria-label="Angle from the fall line: at the base ring, or where the lath crosses the ridge"><output data-for="lathAngle"></output></div>
       <div class="row two" data-gridshell><label>Lath (mm)</label>
         <div class="pair">
-          <input type="number" id="lathW" min="1" step="1" title="Width, lying on the skin" aria-label="Lath width, mm">
+          <input type="number" id="lathW" min="1" step="any" title="Width, lying on the skin" aria-label="Lath width, mm">
           <span>×</span>
-          <input type="number" id="lathT" min="0.5" step="0.5" title="Thickness of one ply" aria-label="Ply thickness, mm">
+          <input type="number" id="lathT" min="0.5" step="any" title="Thickness of one ply" aria-label="Ply thickness, mm">
           <span>×</span>
           <input type="number" id="lathPlies" min="1" step="1" title="Plies stacked and bolted, not glued" aria-label="Plies">
         </div>
@@ -380,6 +384,12 @@
         <div class="pair">
           <input type="number" id="lathE" min="1" step="0.5" title="Bending stiffness E" aria-label="E, GPa"><span>GPa</span>
           <input type="number" id="lathFb" min="1" step="1" title="Allowable bending stress, locked in for the life of the shell" aria-label="Allowable bending stress, MPa"><span>MPa</span>
+        </div>
+      </div>
+      <div class="row two" data-gridshell><label>Stock</label>
+        <div class="pair">
+          <input type="number" id="lathStock" min="300" step="1" title="Length of the stock laths, mm (2438 = 8 ft, 1829 = 6 ft)" aria-label="Stock length, mm"><span>mm</span>
+          <input type="number" id="lathPrice" min="0" step="0.05" title="Price of one stock length" aria-label="Price per stock length"><span>each</span>
         </div>
       </div>
       <p class="hint" id="frameHint"></p>
@@ -452,7 +462,7 @@ const { SYMMETRY_OPTIONS, PY_NATIVE_SYM, METHODS, effectiveMethod } = DomeZ.geod
 const { parsePartial, fracText, acidomePartials, nearestAcidomePartial, effectivePartial } = DomeZ.cut;
 const { add, mul } = DomeZ.vec;
 const { boardQuads } = DomeZ.lumber;
-const { lathPath, surfacePoint } = DomeZ.gridshell;
+const { lathPoints, revolutionProfile } = DomeZ.gridshell;
 const { buildModel } = DomeZ.model;
 const { productColor, typeColor } = DomeZ.colors;
 const { overallOf } = DomeZ.drawing;
@@ -488,7 +498,13 @@ function syncControls() {
   document.querySelector('output[data-for=tol]').textContent = state.tol + ' mm';
   document.querySelector('output[data-for=lathN]').textContent = state.lathN + ' + ' + state.lathN;
   document.querySelector('output[data-for=lathAngle]').textContent = state.lathAngle + '°';
-  for (const id of ['lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb']) $(id).value = state[id];
+  for (const id of ['lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb', 'lathStock', 'lathPrice']) $(id).value = state[id];
+  {
+    // the crown layout needs a round plan; any other plan goes over the top
+    const round = !!revolutionProfile(state), seg = document.querySelector('.seg[data-key=lathLayout]');
+    seg.querySelector('[data-v=crown]').disabled = !round;
+    if (!round) seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === 'over')));
+  }
   for (const id of ['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']) $(id).checked = state[id];
   $('method').value = state.method;
   $('sym').innerHTML = SYMMETRY_OPTIONS.map((s) => `<option value="${s.v}">${s.label}${state.method === 'flat' && PY_NATIVE_SYM[state.base] === s.v ? ' (Python)' : ''}</option>`).join('');
@@ -545,6 +561,8 @@ function wireControls() {
   for (const id of ['beamW', 'beamT']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
   $('gap').addEventListener('change', () => { const v = parseFloat($('gap').value); if (v >= 0) set({ gap: v }); });
   for (const id of ['lathW', 'lathT', 'lathE', 'lathFb']) $(id).addEventListener('change', () => { const v = parseFloat($(id).value); if (v > 0) set({ [id]: v }); });
+  $('lathStock').addEventListener('change', () => { const v = parseFloat($('lathStock').value); if (v >= 300) set({ lathStock: v }); });
+  $('lathPrice').addEventListener('change', () => { const v = parseFloat($('lathPrice').value); if (v >= 0) set({ lathPrice: v }); });
   $('lathPlies').addEventListener('change', () => { const v = Math.round(parseFloat($('lathPlies').value)); if (v >= 1) set({ lathPlies: v }); });
   $('resetBtn').addEventListener('click', () => { state = { ...DEFAULTS }; pinned = false; lastSize = null; syncControls(); scheduleRebuild(); });
   $('dlObj').addEventListener('click', downloadObj);
@@ -628,50 +646,60 @@ function makeGrid() {
 function disposeMesh(m) { if (!m) return; model.remove(m); if (m.geometry !== unitCyl && m.geometry !== unitSphere) m.geometry.dispose(); if (m.dispose) m.dispose(); }
 
 /** The gridshell's laths as flat ribbons on the skin: family A pushed out by half the ply stack and
-    family B in by half, so they meet at the crossings. */
+    family B in by half, so they meet at the crossings. A short pale band marks each joint in the plies. */
 const lathMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.02 });
 const ringMat = new THREE.LineBasicMaterial({ color: 0x8a6d3b });
 function buildLathMesh(G) {
   const stack = G.bend.plies * G.bend.ply / 1000, half = G.bend.width / 2000, laths = [];
-  for (const family of ['A', 'B']) for (let i = 0; i < G.N; i++) {
-    const path = lathPath(G, family, i, (family === 'A' ? 1 : -1) * stack / 2).filter((_, k, a) => k % 3 === 0 || k === a.length - 1);
-    laths.push({ family, i, path });
+  G.laths.forEach((l, k) => {
+    const all = lathPoints(G, k, (l.family === 'A' ? 1 : -1) * stack / 2), every = Math.max(1, Math.round(0.05 / ((all[2].s - all[1].s) || 0.05)));
+    const path = all.filter((_, j, a) => j % every === 0 || j === a.length - 1);
+    const ty = G.types[l.type];
+    const joints = ty.splice ? ty.splice.flatMap((r) => r.joints).map((x) => (l.reversed ? ty.length - x : x)) : [];
+    laths.push({ path, joints });
+  });
+  const segs = laths.reduce((n, l) => n + l.path.length - 1, 0);
+  const pos = new Float32Array(segs * 18), band = new Uint8Array(segs), first = [];
+  let v = 0, seg = 0;
+  for (const { path, joints } of laths) {
+    first.push(seg * 2);
+    for (let k = 0; k + 1 < path.length; k++, seg++) {
+      const a = path[k], b = path[k + 1];
+      band[seg] = joints.some((x) => x >= a.s && x < b.s) ? 1 : 0;
+      const a1 = add(a.p, mul(a.w, half)), a2 = add(a.p, mul(a.w, -half)), b1 = add(b.p, mul(b.w, half)), b2 = add(b.p, mul(b.w, -half));
+      for (const q of [a1, a2, b2, a1, b2, b1]) { pos.set(q, v * 3); v++; }
+    }
   }
-  const segs = laths[0].path.length - 1;
-  const pos = new Float32Array(laths.length * segs * 18);
-  let v = 0;
-  for (const { path } of laths) for (let k = 0; k < segs; k++) {
-    const a = path[k], b = path[k + 1];
-    const a1 = add(a.p, mul(a.w, half)), a2 = add(a.p, mul(a.w, -half)), b1 = add(b.p, mul(b.w, half)), b2 = add(b.p, mul(b.w, -half));
-    for (const q of [a1, a2, b2, a1, b2, b1]) { pos.set(q, v * 3); v++; }
-  }
+  first.push(seg * 2);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(v * 3), 3));
   g.computeVertexNormals();
   const mesh = new THREE.Mesh(g, lathMat);
-  mesh.userData = { trisPerLath: segs * 2, laths: laths.map(({ family, i }) => ({ family, i })) };
+  mesh.userData = { first, band };
   return mesh;
+}
+/** The lath a triangle of the lath mesh belongs to. */
+function lathOfTri(mesh, tri) {
+  const f = mesh.userData.first;
+  let lo = 0, hi = f.length - 2;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (f[mid] <= tri) lo = mid; else hi = mid - 1; }
+  return lo;
 }
 
 /** A bolt at every crossing, between the two layers. */
 function buildNodeMesh(G, r) {
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3().setScalar(r);
-  const mesh = new THREE.InstancedMesh(unitSphere, hubMat, G.N * G.nodes.length);
-  let k = 0;
-  for (let i = 0; i < G.N; i++) for (const n of G.nodes) {
-    m4.compose(v.fromArray(surfacePoint(G.prof, n.t, 2 * Math.PI * i / G.N + n.k * Math.PI / G.N)), q, sc);
-    mesh.setMatrixAt(k++, m4);
-  }
+  const mesh = new THREE.InstancedMesh(unitSphere, hubMat, Math.max(1, G.joints.length));
+  mesh.count = G.joints.length;
+  G.joints.forEach((p, k) => { m4.compose(v.fromArray(p), q, sc); mesh.setMatrixAt(k, m4); });
   return mesh;
 }
 
-function ringLine(radius, z) {
-  const pts = [];
-  for (let k = 0; k < 128; k++) { const a = k / 128 * 2 * Math.PI; pts.push(radius * Math.cos(a), radius * Math.sin(a), z); }
+function outlineLine(pts, closed) {
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
-  return new THREE.LineLoop(g, ringMat);
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts.flat()), 3));
+  return closed ? new THREE.LineLoop(g, ringMat) : new THREE.Line(g, ringMat);
 }
 
 /** All boards as one mesh: six faces per board, the outer face full colour and the rest shaded. */
@@ -719,8 +747,9 @@ function rebuildScene() {
   if (M.gridshell && M.gridshell.ok) {
     const G = M.gridshell;
     lathMesh = buildLathMesh(G); model.add(lathMesh);
-    nodeMesh = buildNodeMesh(G, size * 0.006); model.add(nodeMesh);
-    ringLines = [ringLine(G.rhoBase, G.tBase), ringLine(G.c, G.tCrown)];
+    nodeMesh = buildNodeMesh(G, Math.min(size * 0.006, 0.9 * G.bend.width / 1000)); model.add(nodeMesh);
+    ringLines = G.outlines.map((pts) => outlineLine(pts, true));
+    if (G.ridge) ringLines.push(outlineLine(G.ridge.points.filter((_, k) => k % 5 === 0), false));
     ringLines.forEach((l) => model.add(l));
   }
 
@@ -773,16 +802,20 @@ function colorBoards() {
   document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
 }
 
-/** Family A and B in two colours (or plain wood); hovering a row or a lath picks out its family. */
+/** Laths coloured by type (or plain wood, A lighter than B), joints in a pale band; hovering a row or a
+    lath picks out its type. */
 function colorLaths() {
   if (!lathMesh) return;
-  const col = lathMesh.geometry.getAttribute('color'), per = lathMesh.userData.trisPerLath * 3;
-  const dim = new THREE.Color(cssVar('--stage')), c = new THREE.Color();
-  lathMesh.userData.laths.forEach(({ family }, i) => {
-    const g = family === 'A' ? 0 : 1;
-    c.set(state.colorTypes ? typeColor(g, 10) : (g ? '#b8956a' : '#c9a77c'));
-    if (highlight >= 0 && g !== highlight) c.lerp(dim, 0.82);
-    for (let j = 0; j < per; j++) col.setXYZ(i * per + j, c.r, c.g, c.b);
+  const G = current.gridshell, col = lathMesh.geometry.getAttribute('color'), { first, band } = lathMesh.userData;
+  const dim = new THREE.Color(cssVar('--stage')), c = new THREE.Color(), pale = new THREE.Color(), white = new THREE.Color('#ffffff'), n = Math.max(10, G.types.length);
+  G.laths.forEach((l, k) => {
+    c.set(state.colorTypes ? typeColor(l.type, n) : (l.family === 'B' ? '#b8956a' : '#c9a77c'));
+    if (highlight >= 0 && l.type !== highlight) c.lerp(dim, 0.82);
+    pale.copy(c).lerp(white, 0.8);
+    for (let t = first[k]; t < first[k + 1]; t++) {
+      const x = band[t >> 1] ? pale : c;
+      for (let j = 0; j < 3; j++) col.setXYZ(t * 3 + j, x.r, x.g, x.b);
+    }
   });
   col.needsUpdate = true;
   document.querySelectorAll('#strutRows tr').forEach((tr) => tr.classList.toggle('on', +tr.dataset.g === highlight));
@@ -875,12 +908,11 @@ canvas.addEventListener('pointermove', (e) => {
   if (current.gridshell) {
     const lh = lathMesh && ray.intersectObject(lathMesh, false)[0];
     if (lh) {
-      const G = current.gridshell, l = lathMesh.userData.laths[Math.floor(lh.faceIndex / lathMesh.userData.trisPerLath)];
-      tip.textContent = `Lath ${l.family}${l.i + 1} · ${Math.round(G.length * 1000)} mm · ${G.nodes.length - 1} crossings · ${l.family === 'A' ? 'outer' : 'inner'} layer`;
+      const G = current.gridshell, l = G.laths[lathOfTri(lathMesh, lh.faceIndex)], ty = G.types[l.type];
+      tip.textContent = `Lath ${l.family}${l.i + 1}${G.layout === 'over' ? ' · type ' + ty.label : ''} · ${Math.round(l.length * 1000)} mm · ${l.crossings.length} crossings · ${ty.joins} joints · ${l.family === 'A' ? 'outer' : 'inner'} layer`;
       tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px';
       tip.hidden = false;
-      const g = l.family === 'A' ? 0 : 1;
-      if (!pinned && highlight !== g) { highlight = g; colorStruts(); }
+      if (!pinned && highlight !== l.type) { highlight = l.type; colorStruts(); }
     } else {
       tip.hidden = true;
       if (highlight !== -1 && !pinned) { highlight = -1; colorStruts(); }
@@ -960,30 +992,49 @@ function updateGridshellPanels(M) {
     $('hubLine').textContent = '';
     return;
   }
-  const B = G.bend, over = B.ratio > 1;
-  $('hud').innerHTML = `
+  const B = G.bend, over = B.ratio > 1, st = G.stock, n = Math.max(10, G.types.length);
+  const joins = G.types.map((t) => t.joins), jMin = Math.min(...joins), jMax = Math.max(...joins);
+  const money = (x) => (x >= 100 ? x.toFixed(0) : x.toFixed(2));
+  const stock = `
+    <span class="k">Joints per lath</span><span class="v">${jMin === jMax ? jMin : `${jMin}–${jMax}`}</span>
+    <span class="k">Stock lengths</span><span class="v">${st.lengths} × ${state.lathStock} mm</span>
+    ${st.price > 0 ? `<span class="k">Lath cost</span><span class="v">≈ ${money(st.cost)}</span>` : ''}`;
+  const common = `
+    <span class="k">Tightest bend</span><span class="v">${fmtM(B.minRadius)}</span>
+    <span class="k">Ply stress</span><span class="v${over ? ' warn' : ''}">${B.maxStress.toFixed(1)} / ${B.allowable} MPa</span>${stock}
+    <span class="k opt">Height</span><span class="v opt">${fmtM(h)}</span>
+    <span class="k opt">Width</span><span class="v opt">${fmtM(w)}</span>
+    <span class="k opt">Timber</span><span class="v opt">${st.timber.toFixed(1)} m of ${B.width}×${B.ply}</span>`;
+  $('hud').innerHTML = G.layout === 'crown' ? `
     <div class="title">${shapeTitle(state)} · gridshell</div>
     <span class="k">Laths</span><span class="v">${2 * G.N}</span>
     <span class="k">Lath length</span><span class="v">${fmtM(G.length)}</span>
     <span class="k">Crossings</span><span class="v">${G.crossings}</span>
-    <span class="k">Crown ring</span><span class="v">Ø ${fmtM(2 * G.c)}</span>
-    <span class="k">Tightest bend</span><span class="v">${fmtM(B.minRadius)}</span>
-    <span class="k">Ply stress</span><span class="v${over ? ' warn' : ''}">${B.maxStress.toFixed(1)} / ${B.allowable} MPa</span>
-    <span class="k opt">Height</span><span class="v opt">${fmtM(h)}</span>
-    <span class="k opt">Width</span><span class="v opt">${fmtM(w)}</span>
-    <span class="k opt">Timber</span><span class="v opt">${(2 * G.N * G.length * B.plies).toFixed(1)} m of ${B.width}×${B.ply}</span>`;
-  $('strutRows').innerHTML = ['A', 'B'].map((f, g) => `
+    <span class="k">Crown ring</span><span class="v">Ø ${fmtM(2 * G.c)}</span>${common}` : `
+    <div class="title">${shapeTitle(state)} · gridshell</div>
+    <span class="k">Laths</span><span class="v">${2 * G.N}</span>
+    <span class="k">Lath types</span><span class="v">${G.types.length}</span>
+    <span class="k">Lath length</span><span class="v">${fmtM(G.shortest)} – ${fmtM(G.length)}</span>
+    <span class="k">Crossings</span><span class="v">${G.crossings}</span>${common}`;
+  $('strutRows').innerHTML = G.types.map((t, g) => `
     <tr data-g="${g}">
-      <td><span class="sw" style="background:${typeColor(g, 10)}"></span>${f} · ${g ? 'inner' : 'outer'}</td>
-      <td class="n">${Math.round(G.length * 1000)} mm</td>
-      <td class="n">${G.nodes.length - 1}</td>
-      <td class="n">${G.N}</td>
+      <td><span class="sw" style="background:${typeColor(g, n)}"></span>${t.label}</td>
+      <td class="n">${Math.round(t.length * 1000)} mm</td>
+      <td class="n">${t.crossings}</td>
+      <td class="n">${t.members.length}</td>
     </tr>`).join('');
-  $('strutHint').className = 'hint' + (over ? ' warn' : '');
-  $('strutHint').textContent = over
+  const bend = over
     ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less.`
-    : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m), within the ${B.allowable} MPa allowed. Every lath is the same; B laths are mirror images.`;
-  $('hubLine').textContent = `Base ring Ø ${fmtM(2 * G.rhoBase)} · crown ring Ø ${fmtM(2 * G.c)}, ${fmtM(G.tCrown - G.tBase)} above the base · most twist ${B.maxTwist.toFixed(1)}°/m`;
+    : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m), within the ${B.allowable} MPa allowed.`;
+  const layout = G.layout === 'crown'
+    ? 'Every lath is the same; B laths are mirror images.'
+    : `Laths of one type share a drilling template; B laths are mirror images.${G.trimmed ? ` ${G.trimmed} lath ends stop on a lath of their own family, where the laths converge near the ends.` : ''}`;
+  const splice = `Each lath is spliced from ${state.lathStock} mm stock, ${st.plies === 1 ? 'with a splice plate at each joint' : `joints staggered between the ${st.plies} plies`} and kept ${Math.round(st.clear * 1000)} mm clear of the bolts (pale bands).`;
+  $('strutHint').className = 'hint' + (over ? ' warn' : '');
+  $('strutHint').textContent = `${bend} ${layout} ${splice}`;
+  $('hubLine').textContent = G.layout === 'crown'
+    ? `Base ring Ø ${fmtM(2 * G.rhoBase)} · crown ring Ø ${fmtM(2 * G.c)}, ${fmtM(G.tCrown - G.tBase)} above the base · most twist ${B.maxTwist.toFixed(1)}°/m`
+    : `Base ${fmtM(2 * G.base[0])} × ${fmtM(2 * G.base[1])} · ridge ${fmtM(G.ridge.length)}, crossed every ${fmtM(G.ridge.spacing)} · most twist ${B.maxTwist.toFixed(1)}°/m`;
 }
 
 function updatePanels() {

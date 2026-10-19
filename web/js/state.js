@@ -8,17 +8,18 @@ const DEFAULTS = {
   base: 'icosahedron', freq: 3, method: 'kruschke', sym: 'pentad', partial: '7/12', flat: false,
   panels: 'glass', showStruts: true, showHubs: true, colorTypes: true, spin: false,
   tol: 1, frame: 'joint', beamW: 120, beamT: 40, gap: 0, upAxis: 'z', objLines: false,
-  lathN: 20, lathAngle: 30, lathW: 50, lathT: 12, lathPlies: 2, lathE: 10, lathFb: 20,
+  lathN: 20, lathAngle: 30, lathLayout: 'crown', lathW: 50, lathT: 12, lathPlies: 2, lathE: 10, lathFb: 20,
+  lathStock: 2438, lathPrice: 2.5,
 };
 
 const NUMERIC = new Set(['r', 'rx', 'ry', 'rz', 'eggL', 'eggB', 'eggW', 'freq', 'tol', 'beamW', 'beamT', 'gap',
-  'lathN', 'lathAngle', 'lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb']);
+  'lathN', 'lathAngle', 'lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb', 'lathStock', 'lathPrice']);
 
 const FRAMES = {
   joint: 'Acidome\u2019s Joint: hubless boards, each end cut against the side of the next board clockwise around the hub (seen from outside). Width runs along the radius; every board aims at the dome\u2019s centre.',
   'joint-ccw': 'Joint turning the other way: each board butts into the next board anticlockwise around the hub.',
   struts: 'Hub-to-hub struts only, for metal hubs or your own connectors. Lengths are centre to centre.',
-  gridshell: 'Prototype. A timber gridshell: long laths lie flat on the skin along geodesic lines, so they only bend the easy way. Family A turns one way and family B mirrors it; they cross between an outer and an inner layer and are bolted where they meet, from the base ring up to a crown ring. Needs a round plan: a sphere, an egg, or an ellipsoid with equal X and Y radii.',
+  gridshell: 'Prototype. A timber gridshell: long laths lie flat on the skin along geodesic lines, so they only bend the easy way. Family A turns one way and family B mirrors it; they cross between an outer and an inner layer and are bolted where they meet. On a round plan they can climb from the base ring to a crown ring; on any shape they can run over the top, from base to base, crossing the ridge at even spacing. Each lath is spliced from stock lengths.',
 };
 
 const BOOLEAN = new Set(['flat', 'showStruts', 'showHubs', 'colorTypes', 'spin', 'objLines']);
@@ -44,7 +45,10 @@ function parseState(query) {
   s.lathN = Math.min(120, Math.max(3, Math.round(s.lathN) || DEFAULTS.lathN));
   s.lathAngle = Math.min(80, Math.max(2, s.lathAngle));
   for (const k of ['lathW', 'lathT', 'lathPlies', 'lathE', 'lathFb']) if (!(s[k] > 0)) s[k] = DEFAULTS[k];
-  s.lathPlies = Math.round(s.lathPlies);
+  s.lathPlies = Math.max(1, Math.round(s.lathPlies));
+  if (s.lathLayout !== 'over') s.lathLayout = 'crown';
+  if (!(s.lathStock >= 300)) s.lathStock = DEFAULTS.lathStock;
+  if (!(s.lathPrice >= 0)) s.lathPrice = DEFAULTS.lathPrice;
   return s;
 }
 

@@ -334,29 +334,81 @@ function cutSheetRows(M, s, href) {
   return rows;
 }
 
-/** A gridshell's facts, its bend verdict and its crossing rows, shared by the sheet and the CSV. */
+/** The joints and the stock lengths, for either layout: facts, the method, and each type's plies. */
+function gridshellStock(G, s) {
+  const st = G.stock, mm = (m) => Math.round(m * 1000), joins = G.types.map((t) => t.joins);
+  const lo = Math.min(...joins), hi = Math.max(...joins), money = (x) => (x >= 100 ? x.toFixed(0) : x.toFixed(2));
+  return {
+    facts: [['Joints per lath', lo === hi ? String(lo) : `${lo}–${hi}`], ['Stock lengths', `${st.lengths} × ${s.lathStock} mm`],
+            ...(st.price > 0 ? [['Lath cost', `≈ ${money(st.cost)} at ${st.price} a length`]] : []), ['Timber', `${st.timber.toFixed(1)} m`]],
+    method: `Each ply is laid end to end from ${s.lathStock} mm stock. ` + (st.plies > 1
+      ? `Ply 1 starts with a whole length and each further ply with a shorter piece, so the joints in neighbouring plies are staggered and every joint is bridged by the other ${st.plies === 2 ? 'ply' : 'plies'}. Screw or bolt the plies together either side of each joint.`
+      : 'With a single ply, every joint needs a splice plate: a short piece of the same lath screwed across it.') +
+      ` Joints stay ${mm(st.clear)} mm clear of the bolts, and no end piece is shorter than ${mm(st.minPiece)} mm.` +
+      ` ${st.joins} joints in all: ${st.pieces} pieces from ${st.lengths} stock lengths, ${st.whole} of them used whole and the other pieces packed into ${st.cutFrom}, with ${st.waste.toFixed(1)} m of offcuts.`,
+    plies: (t) => t.splice.map((r, k) => [`Ply ${k + 1}`, r.joints.length ? r.joints.map(mm).join(', ') : 'none', r.pieces.map(mm).join(' + ')]),
+  };
+}
+
+const pliesTable = (rows) => `<div class="tablewrap-x"><table>
+      <thead><tr><th>Ply</th><th>Joints, mm from the start</th><th>Pieces, mm</th></tr></thead>
+      <tbody>${rows.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td class="seq">${esc(b)}</td><td class="seq">${esc(c)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+
+const verdictOf = (B) => (B.ratio > 1
+  ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less, and more of them for the same section.`
+  : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), within the ${B.allowable} MPa allowed.`);
+
+const PROTOTYPE = 'Prototype: this is geometry plus a simple bend check. The plies are taken as unglued, so each bends on its own thickness: stress = E × ply thickness ÷ (2 × bend radius). Twist, buckling, snow and wind loads, the joints and the bolted crossings still need an engineer’s check.';
+
+/** A crown gridshell's facts, its bend verdict and its crossing rows, shared by the sheet and the CSV. */
 function gridshellParts(M, s) {
   const G = M.gridshell, B = G.bend, mm = (m) => Math.round(m * 1000), deg = (r) => (r * 180 / Math.PI).toFixed(1) + '°';
-  const over = B.ratio > 1;
+  const over = B.ratio > 1, stock = gridshellStock(G, s);
   return {
-    G, B, mm, deg, over,
+    G, B, mm, deg, over, stock,
     facts: [['Laths', `${2 * G.N} (${G.N} + ${G.N} mirrored)`], ['Lath length', `${mm(G.length)} mm`],
             ['Section', `${B.width} × ${B.ply} mm, ${B.plies} ${B.plies === 1 ? 'ply' : 'plies'}`], ['Crossings', G.crossings],
             ['Base ring', `Ø ${mm(2 * G.rhoBase)} mm`], ['Crown ring', `Ø ${mm(2 * G.c)} mm`], ['Crown height', `${mm(G.tCrown - G.tBase)} mm up`],
             ['Tightest bend', `${B.minRadius.toFixed(2)} m`], ['Ply stress', `${B.maxStress.toFixed(1)} of ${B.allowable} MPa`],
-            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`]],
-    verdict: over
-      ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less, and more of them for the same section.`
-      : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), within the ${B.allowable} MPa allowed.`,
+            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`], ...stock.facts],
+    verdict: verdictOf(B),
     setOut: `Set out ${G.N} points evenly on the base ring, every ${(360 / G.N).toFixed(2)}°. From each point an A lath leaves leaning ${deg(G.psi)} from the vertical one way, and a B lath ${deg(G.psi)} the other way. A laths run in the outer layer and B laths in the inner layer. Each A lath crosses a B lath at every row of the table, where the two are bolted. Every lath ends on the crown ring, running level along it, having turned ${deg(G.crownTurn)} around the dome.`,
   };
 }
 
-/** The gridshell sheet: the lath (every lath is the same; B laths are mirror images), where it crosses, and the bend check. */
+/** An over-the-top gridshell's facts, verdict, setting-out text and per-lath rows. */
+function overParts(M, s) {
+  const G = M.gridshell, B = G.bend, mm = (m) => Math.round(m * 1000), deg = (r) => (r * 180 / Math.PI).toFixed(1) + '°';
+  const stock = gridshellStock(G, s), axis = G.ridge.along[1] ? 'Y' : 'X';
+  const name = (l) => `${l.family}${l.i + 1}`;
+  const endOf = (l, start) => {
+    const on = start ? l.startOn : l.endOn, q = l.samples[start ? 0 : l.samples.length - 1].p;
+    return on ? `on ${on.family}${on.i + 1}, ${mm(on.s)} mm along it` : `base at X ${mm(q[0])}, Y ${mm(q[1])}`;
+  };
+  return {
+    G, B, mm, deg, over: B.ratio > 1, stock, axis, name, endOf,
+    facts: [['Laths', `${2 * G.N} (${G.N} + ${G.N} mirrored)`], ['Lath types', G.types.length], ['Lath lengths', `${mm(G.shortest)}–${mm(G.length)} mm`],
+            ['Section', `${B.width} × ${B.ply} mm, ${B.plies} ${B.plies === 1 ? 'ply' : 'plies'}`], ['Crossings', G.crossings],
+            ['Base', `${mm(2 * G.base[0])} × ${mm(2 * G.base[1])} mm`], ['Ridge', `${mm(G.ridge.length)} mm`], ['Ridge spacing', `${mm(G.ridge.spacing)} mm`],
+            ['Tightest bend', `${B.minRadius.toFixed(2)} m`], ['Ply stress', `${B.maxStress.toFixed(1)} of ${B.allowable} MPa`],
+            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`], ...stock.facts],
+    verdict: verdictOf(B),
+    setOut: `Mark the ridge, the line over the top along the ${axis} axis, ${mm(G.ridge.length)} mm from base to base, measuring from its −${axis} end. Each lath crosses the ridge at the distance in the table, ${deg(G.psi)} from the fall line there: A laths one way, B laths the other. A laths run in the outer layer and B laths in the inner layer, and each A lath is bolted to each B lath it crosses. A lath starts on the base, at the point given from the centre of the base, and runs over the ridge to its far end.${G.trimmed ? ` Near the ends, where laths of one family converge, ${G.trimmed} lath ends stop on a lath of their own family instead, bolted to it.` : ''}`,
+    templates: 'Laths of one type share a drilling template, marked from the start end. A lath listed as reversed takes the template from its far end, and B laths, mirror images, take it turned over. Distances run along the lath’s centre line.',
+  };
+}
+
+const crossingRows = (list, mm) => list.map((n, k) => `<tr>
+      <td>${k + 1}</td><td class="n">${mm(n.s)}</td><td class="n">${mm(n.rise)}</td><td class="n">${n.angle.toFixed(1)}°</td>
+      <td class="n">${Number.isFinite(n.radius) ? n.radius.toFixed(2) : '—'}</td></tr>`).join('');
+
+/** The gridshell sheet: the laths, where they cross, where they are joined, and the bend check. */
 function gridshellSheetHTML(M, s, href) {
   const d = designFacts(M, s);
   if (!M.gridshell.ok) return `<h1>Gridshell · ${esc(d.title)}</h1><p class="sub">${esc(M.gridshell.reason)}</p>`;
-  const { G, mm, deg, over, facts, verdict, setOut } = gridshellParts(M, s);
+  if (M.gridshell.layout === 'over') return overSheetHTML(M, s, href, d);
+  const { G, mm, deg, over, facts, verdict, setOut, stock } = gridshellParts(M, s);
   const rows = G.nodes.map((n) => `<tr>
       <td class="big">${n.k ? n.k : 'base'}</td>
       <td class="n big">${mm(n.s)}</td>
@@ -375,21 +427,75 @@ function gridshellSheetHTML(M, s, href) {
       <thead><tr><th>Crossing</th><th class="n">Along the lath, mm</th><th class="n">Height above base, mm</th><th class="n">Angle between laths</th><th class="n">Bend radius, m</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
+    <h3>Joints</h3>
+    ${pliesTable(stock.plies(G.types[0]))}
+    <p class="note">${esc(stock.method)}</p>
 
     <h2>Setting out</h2>
     <p class="note">${esc(setOut)}</p>
-    <p class="note">Prototype: this is geometry plus a simple bend check. The plies are taken as unglued, so each bends on its own thickness: stress = E × ply thickness ÷ (2 × bend radius). Twist, buckling, snow and wind loads, and the bolted crossings still need an engineer's check.</p>
+    <p class="note">${esc(PROTOTYPE)}</p>
+    <p class="note link">Design link: ${esc(href)}</p>`;
+}
+
+function overSheetHTML(M, s, href, d) {
+  const { G, mm, deg, over, facts, verdict, setOut, templates, stock, name, endOf } = overParts(M, s);
+  const types = G.types.map((t) => `
+    <h3>${esc(t.label)} · ${mm(t.length)} mm · ${t.members.length} ${t.members.length === 1 ? 'lath' : 'laths'}: ${esc(t.members.map((l) => name(l) + (l.reversed ? ' (reversed)' : '')).join(', '))}</h3>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Crossing</th><th class="n">Along the lath, mm</th><th class="n">Height above base, mm</th><th class="n">Angle between laths</th><th class="n">Bend radius, m</th></tr></thead>
+      <tbody>${crossingRows(t.rep.crossings, mm)}</tbody>
+    </table></div>
+    <p class="note">Joints, ${t.joins} per lath:</p>
+    ${pliesTable(stock.plies(t))}`).join('');
+  const laths = G.laths.map((l) => `<tr>
+      <td>${name(l)}</td><td>${esc(G.types[l.type].label)}${l.reversed ? ' <span class="tag">reversed</span>' : ''}</td>
+      <td class="n">${mm(l.sigma)}</td><td>${esc(endOf(l, true))}</td><td>${esc(endOf(l, false))}</td><td class="n">${mm(l.length)}</td></tr>`).join('');
+  return `
+    <h1>Gridshell · ${esc(d.title)}</h1>
+    <p class="sub">${d.lines.filter(([k]) => k === 'Shape' || k === 'Cut').map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')} &nbsp;·&nbsp; <b>Laths:</b> ${G.N} per family over the top, crossing the ridge at ${deg(G.psi)} from the fall line</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+    <p class="note"${over ? ' style="color:var(--warn)"' : ''}>${esc(verdict)}</p>
+
+    <h2>Lath types</h2>
+    <p class="note">${esc(templates)}</p>
+    ${types}
+    <p class="note">${esc(stock.method)}</p>
+
+    <h2>Setting out</h2>
+    <p class="note">${esc(setOut)}</p>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Lath</th><th>Type</th><th class="n">Ridge at, mm</th><th>Start</th><th>Far end</th><th class="n">Length, mm</th></tr></thead>
+      <tbody>${laths}</tbody>
+    </table></div>
+    <p class="note">${esc(PROTOTYPE)}</p>
     <p class="note link">Design link: ${esc(href)}</p>`;
 }
 
 function gridshellSheetRows(M, s, href) {
   const d = designFacts(M, s);
   if (!M.gridshell.ok) return [['DomeZ gridshell', d.title], ['Note', M.gridshell.reason]];
-  const { G, mm, facts, verdict, setOut } = gridshellParts(M, s);
+  if (M.gridshell.layout === 'over') return overSheetRows(M, s, href, d);
+  const { G, mm, facts, verdict, setOut, stock } = gridshellParts(M, s);
   const rows = [['DomeZ gridshell', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, ['Bend check', verdict], []];
   rows.push(['The lath (every lath the same; B laths mirrored)'], ['Crossing', 'Along the lath (mm)', 'Height above base (mm)', 'Angle between laths (deg)', 'Bend radius (m)']);
   for (const n of G.nodes) rows.push([n.k ? n.k : 'base', mm(n.s), mm(n.rise), n.angle.toFixed(1), Number.isFinite(n.radius) ? n.radius.toFixed(2) : '']);
+  rows.push([], ['Ply', 'Joints (mm from the start)', 'Pieces (mm)'], ...stock.plies(G.types[0]), ['Joints', stock.method]);
   rows.push([], ['Setting out', setOut]);
+  return rows;
+}
+
+function overSheetRows(M, s, href, d) {
+  const { G, mm, facts, verdict, setOut, templates, stock, name, endOf } = overParts(M, s);
+  const rows = [['DomeZ gridshell', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, ['Bend check', verdict], []];
+  rows.push(['Lath types', templates]);
+  for (const t of G.types) {
+    rows.push([], [`Type ${t.label}`, `${mm(t.length)} mm`, t.members.map((l) => name(l) + (l.reversed ? ' (reversed)' : '')).join(' ')]);
+    rows.push(['Crossing', 'Along the lath (mm)', 'Height above base (mm)', 'Angle between laths (deg)', 'Bend radius (m)']);
+    t.rep.crossings.forEach((n, k) => rows.push([k + 1, mm(n.s), mm(n.rise), n.angle.toFixed(1), n.radius.toFixed(2)]));
+    rows.push(['Ply', 'Joints (mm from the start)', 'Pieces (mm)'], ...stock.plies(t));
+  }
+  rows.push([], ['Joints', stock.method], [], ['Setting out', setOut], ['Lath', 'Type', 'Ridge at (mm)', 'Start', 'Far end', 'Length (mm)']);
+  for (const l of G.laths) rows.push([name(l), G.types[l.type].label + (l.reversed ? ' reversed' : ''), mm(l.sigma), endOf(l, true), endOf(l, false), mm(l.length)]);
   return rows;
 }
 

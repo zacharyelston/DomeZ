@@ -1,5 +1,7 @@
 # DomeZ
 
+![The DomeZ viewer showing a 3V Kruschke ellipsoid (radii 3, 3 and 4.5 m, 3/4 cut, flat base) framed in Joint boards coloured by type, next to the shape, geodesic and cut controls](docs/example.png)
+
 **Acidome with Height+**: design geodesic domes, ellipsoids and eggs, and get what you need to build them.
 
 **Try it: [zacharyelston.github.io/DomeZ](https://zacharyelston.github.io/DomeZ/)**

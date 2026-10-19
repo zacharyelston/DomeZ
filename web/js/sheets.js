@@ -7,6 +7,7 @@ const { productColor, typeColor } = DomeZ.colors;
 const { boardDrawing, overallOf, boardSVG } = DomeZ.drawing;
 const { faceOpening } = DomeZ.openings;
 const { JIG, buildJigs, cradleSVG, endTopSVG } = DomeZ.jig;
+const { LATHJIG, buildLathJigs, jigPlanSVG, jigSectionSVG, lathJigSCAD } = DomeZ.lathjig;
 const { esc, mmText, inchText, fmtM, degText, rangeText } = DomeZ.format;
 
 function shapeTitle(s) {
@@ -223,6 +224,7 @@ const sideText = { right: 'right of the blade', left: 'left of the blade' };
 const faceText = { top: 'top-edge face', bottom: 'bottom-edge face' };
 
 function jigSheetHTML(M, s, href) {
+  if (M.gridshell) return lathJigSheetHTML(M, s, href);
   const L = M.lumber, J = buildJigs(L), d = designFacts(M, s);
   const mm = (m) => Math.round(m * 1000), longest = Math.max(...J.plans.map((pl) => pl.overall)) + 10;
   const reach = J.adjustable ? J.reachAdjustable : J.reach;
@@ -296,6 +298,7 @@ function jigSheetHTML(M, s, href) {
 }
 
 function jigCsvRows(M, s, href) {
+  if (M.gridshell) return lathJigCsvRows(M, s, href);
   const L = M.lumber, J = buildJigs(L), mm = (m) => Math.round(m * 1000), f1 = (a) => a.toFixed(1);
   const rows = [['DomeZ jig sheet', designFacts(M, s).title], ['Board size (mm)', `${s.beamW} x ${s.beamT}`], ['Saw', `0 bevel, miter up to ${JIG.maxMiter}`],
     ['V-cradle', J.adjustable ? 'one adjustable cradle' : `${J.cradles.length} fixed cradles`],
@@ -499,8 +502,99 @@ function overSheetRows(M, s, href, d) {
   return rows;
 }
 
+/* ---- Lath jigs: a cradle for each kind of crossing of a gridshell ---- */
+
+/** The lath jig sheet's shared parts: the jigs, each one's turn and where it serves, and the facts. */
+function lathJigParts(M, s) {
+  const G = M.gridshell, J = buildLathJigs(G, s), mm = (m) => Math.round(m * 1000);
+  const turn = (j) => `${degText(j.theta)} ${j.phi >= 0 ? 'anticlockwise' : 'clockwise'}`;
+  const where = (j) => (G.layout === 'crown'
+    ? `crossing${j.rings.length > 1 ? 's' : ''} ${j.rings.join(', ')} of every lath, ${mm(j.rise[0])}${j.rise[1] - j.rise[0] > 0.0005 ? `–${mm(j.rise[1])}` : ''} mm up`
+    : `${j.count} crossing${j.count > 1 ? 's' : ''}, ${mm(j.rise[0])}${j.rise[1] - j.rise[0] > 0.0005 ? `–${mm(j.rise[1])}` : ''} mm up`);
+  const R = (r) => (Number.isFinite(r) ? `${r.toFixed(2)} m` : 'flat');
+  const facts = [['Crossings', J.crossings], ['Jigs', J.jigs.length], ['Lath', `${s.lathW} × ${mm(J.stack)} mm (${s.lathPlies} × ${s.lathT})`],
+    ['Turn, A over B', rangeText(J.turn)], ['Bend radii', Number.isFinite(J.radius[0]) ? `${J.radius[0].toFixed(2)}–${J.radius[1].toFixed(2)} m` : '—'],
+    ['Blocks', `${mm(2 * J.reach[0])}–${mm(2 * J.reach[1])} mm square`], ['Skin fit', `within ${(J.worst * 1000).toFixed(1)} mm`],
+    ['Strap round a crossing', `${mm(J.strap[0])}–${mm(J.strap[1])} mm`], ['Strap in all', `${J.strapTotal.toFixed(1)} m + seals`]];
+  return { G, J, mm, turn, where, R, facts };
+}
+
+/** The lath jig sheet: a card per jig with its plan and sections, every jig in a table, and which jig
+    each lath meets at each crossing. */
+function lathJigSheetHTML(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G.ok) return `<h1>Lath jig sheet · ${esc(d.title)}</h1><p class="sub">${esc(G.reason)}</p>`;
+  const { J, mm, turn, where, R, facts } = lathJigParts(M, s), f1 = (x) => x.toFixed(1);
+  if (!J.jigs.length) return `<h1>Lath jig sheet · ${esc(d.title)}</h1><p class="sub">The laths never cross above the base, so there is nothing to jig.</p>`;
+  const cards = J.jigs.map((j) => `
+    <div class="cradle-card">
+      <div class="drawing-head"><span class="dot jig">${j.name}</span><b>A over B, turned ${esc(turn(j))}</b> · ${esc(where(j))}</div>
+      ${jigPlanSVG(j)}
+      ${jigSectionSVG(j, 'A')}
+      ${jigSectionSVG(j, 'B')}
+      <div class="small-facts">Block ${mm(2 * j.reach)} × ${mm(2 * j.reach)} mm, ${mm(j.depth)} mm tall at the centre; groove ${mm(j.w + 2 * LATHJIG.clearance)} wide and ${mm(j.stack)} deep along B, fences ${mm(LATHJIG.fence)} mm along A. Bend radius ${R(j.RA)} along A and ${R(j.RB)} along B, so the top sags ${f1(j.sagA * 1000)} and ${f1(j.sagB * 1000)} mm to the block's edge; twist ${f1(Math.abs(j.twistA))}° along A and ${f1(Math.abs(j.twistB))}° along B over the block. The laths overlap ${j.overlap.long > 1 ? 'over 1000' : mm(j.overlap.long)} × ${mm(j.overlap.short)} mm${j.overlap.long > 2 * j.reach ? ', longer than the block' : ''}. Skin fit within ${(j.worst * 1000).toFixed(1)} mm. Strap round the crossing ${mm(j.strapRound)} mm plus the seal.</div>
+    </div>`).join('');
+  const rows = J.jigs.map((j) => `<tr>
+      <td class="big">${j.name}</td><td class="n big">${esc(turn(j))}</td><td class="n">${j.count}</td><td>${esc(where(j))}</td>
+      <td class="n">${R(j.RA)}</td><td class="n">${R(j.RB)}</td><td class="n">${f1(j.sagA * 1000)} / ${f1(j.sagB * 1000)}</td>
+      <td class="n">${f1(Math.abs(j.twistA))}° / ${f1(Math.abs(j.twistB))}°</td><td class="n">${mm(2 * j.reach)}</td><td class="n">${mm(j.strapRound)}</td></tr>`).join('');
+  const along = G.layout === 'crown'
+    ? `<p class="note">Every lath is the same, so every lath meets the jigs in the same order from its base end: ${esc(J.byLath[0].map((n, k) => `${n} at crossing ${k + 1}`).join(', '))}. A jig holds one A lath over one B lath, so the B laths take the same jigs at the same crossings.</p>`
+    : `<div class="tablewrap-x"><table>
+      <thead><tr><th>Lath</th><th>Type</th><th>Jig at each crossing, from the lath's start</th></tr></thead>
+      <tbody>${G.laths.map((l, k) => `<tr><td>${l.family}${l.i + 1}</td><td>${esc(G.types[l.type].label)}${l.reversed ? ' <span class="tag">reversed</span>' : ''}</td><td class="seq">${esc(J.byLath[k].join(' '))}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  const many = J.jigs.length > 12 ? `<p class="note">This design needs ${J.jigs.length} different jigs: the laths meet at many turns and the skin's curvature changes along them. For a plywood build, make one flat block per turn and shim its groove to the sag; for printing, the OpenSCAD file renders them all in a row.</p>` : '';
+  return `
+    <h1>Lath jig sheet · ${esc(d.title)}</h1>
+    <p class="sub">Where an <b>A lath</b> (outer layer) crosses a <b>B lath</b> (inner layer), both bent to the skin, a <b>cradle</b> holds them as they sit in the shell: a block whose top copies the skin round the crossing, with lath B in a groove one lath deep and lath A over it between two fences. Clamp the pair in it to drill the bolt hole square to the skin, or to strap them together, then move on to the next crossing.</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+    <p class="note">The turn is the angle from lath B's line to lath A's line, seen from outside, so a jig and its mirror image are two jigs. The bend radii and twists are the skin's along each lath at the crossing, straight from the lath spec; the top of each block is the skin itself, fitted as a quadric, which carries them both. Crossings whose turn is within ${LATHJIG.angleStep}° and whose sag over the block is within ${LATHJIG.sagStep * 1000} mm share a jig.</p>
+    ${many}
+
+    <h2>Jigs to make</h2>
+    <p class="note">Each card shows the jig from outside (lath A on top, the bolt at the crossing, the strap line dashed), then a section along each lath's centre line with the skin's sag over the block. <b>Download OpenSCAD</b> gives every block as a printable solid, with the lath size, clearance, fences, bolt and strap as settings at the top of the file; or cut a flat block to the plan and shim the groove's bed to the sag.</p>
+    <div class="lathjig-grid">${cards}</div>
+
+    <h2>All jigs</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Jig</th><th class="n">Turn, A over B</th><th class="n">Crossings</th><th>Where</th><th class="n">R along A</th><th class="n">R along B</th><th class="n">Sag A / B, mm</th><th class="n">Twist A / B</th><th class="n">Block, mm</th><th class="n">Strap, mm</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+
+    <h2>Jigs along the laths</h2>
+    ${along}
+    <p class="note">Using a jig: set the block under the crossing with the groove along lath B and the fences along lath A, lay lath B in the groove and lath A over it, clamp, and drill through both on the block's axis (the skin's normal) for the bolt; or pass a strap through the block's slot, under lath B and over lath A, pull it tight and seal it. Strap lengths are the distance round the two laths; add your sealing overlap. A lath end that stops on a lath of its own family is a lap, not a crossing, and is not jigged here.</p>
+    <p class="note">${esc(PROTOTYPE)}</p>
+    <p class="note link">Design link: ${esc(href)}</p>`;
+}
+
+function lathJigCsvRows(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G.ok) return [['DomeZ lath jig sheet', d.title], ['Note', G.reason]];
+  const { J, mm, where, facts } = lathJigParts(M, s), f1 = (x) => x.toFixed(1), f4 = (x) => x.toFixed(4);
+  const rows = [['DomeZ lath jig sheet', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, []];
+  rows.push(['Jig', 'Turn A over B (deg, + anticlockwise seen from outside)', 'Crossings', 'Where', 'Height above base (mm)', 'R along A (m)', 'R along B (m)',
+    'Sag along A (mm)', 'Sag along B (mm)', 'Twist along A (deg over the block)', 'Twist along B (deg over the block)', 'Block (mm square)', 'Block tall at the centre (mm)',
+    'Overlap long (mm)', 'Overlap short (mm)', 'Strap round (mm)', 'Skin fit (mm)', 'L (1/m)', 'M (1/m)', 'N (1/m)']);
+  for (const j of J.jigs) rows.push([j.name, f1(j.phi), j.count, where(j), j.rise[1] - j.rise[0] > 0.0005 ? `${mm(j.rise[0])}-${mm(j.rise[1])}` : mm(j.rise[0]),
+    Number.isFinite(j.RA) ? j.RA.toFixed(3) : '', Number.isFinite(j.RB) ? j.RB.toFixed(3) : '', f1(j.sagA * 1000), f1(j.sagB * 1000), f1(Math.abs(j.twistA)), f1(Math.abs(j.twistB)),
+    mm(2 * j.reach), mm(j.depth), mm(Math.min(j.overlap.long, 10)), mm(j.overlap.short), mm(j.strapRound), (j.worst * 1000).toFixed(2), f4(j.L), f4(j.M), f4(j.N)]);
+  rows.push([], ['Jigs along the laths'], ['Lath', 'Type', 'Jig at each crossing from the start']);
+  G.laths.forEach((l, k) => rows.push([`${l.family}${l.i + 1}`, G.types[l.type].label + (l.reversed ? ' reversed' : ''), J.byLath[k].join(' ')]));
+  return rows;
+}
+
+/** Every jig of a gridshell as OpenSCAD source. */
+function lathJigScadText(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G || !G.ok) return `// DomeZ lath crossing jigs · ${d.title}\n// ${G ? G.reason : 'Not a gridshell design.'}\n`;
+  return lathJigSCAD(buildLathJigs(G, s), s, d.title, href);
+}
+
 DomeZ.sheets = {
   sideText, faceText, shapeTitle, designFacts, boardsAroundHub, sawText, lumberSheetHTML, cutSheetHTML,
   lumberSheetRows, cutSheetRows, jigSheetHTML, jigCsvRows, gridshellSheetHTML, gridshellSheetRows,
+  lathJigSheetHTML, lathJigCsvRows, lathJigScadText,
 };
 })(globalThis.DomeZ = globalThis.DomeZ || {});

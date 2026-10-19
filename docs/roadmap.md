@@ -27,7 +27,7 @@ Acidome has five views: Base, Framework, Scheme, Cover and Tent. DomeZ provides 
 5. **Tent: nets and bags.** Flat patterns from the unfolder, including triangular foam-in-bag envelopes.
 6. **Snow.** A pitch map that colours panels by slope and reports the near-flat crown area, plus a simple per-panel snow-load estimate from a ground snow load, to compare forms.
 7. **Double skins.** Inner and outer offset meshes with a set cavity and the struts that connect them.
-8. **Gridshells.** A prototype is in the viewer: two mirror families of laths laid flat along geodesic lines, with their crossings, lath types, splices from stock lengths and a bend check. Round plans can climb to a crown ring; any shape, long ellipsoids included, can run over the top. Still to do: closing the crown, laths that start at different angles (to even out the cells), twist and buckling checks, the crossing bolts and shear blocks, skin panels for the grid cells, and a Python twin.
+8. **Gridshells.** A prototype is in the viewer: two mirror families of laths laid flat along geodesic lines, with their crossings, lath types, splices from stock lengths and a bend check. Round plans can climb to a crown ring; any shape, long ellipsoids included, can run over the top. The jig sheet gives a cradle per kind of crossing, with the skin's bend and twist along both laths, as drawings and as OpenSCAD. Still to do: closing the crown, laths that start at different angles (to even out the cells), twist and buckling checks, the crossing bolts and shear blocks themselves, lap jigs where a lath ends on its own family, skin panels for the grid cells, and a Python twin.
 9. **Imperial units.** Nominal lumber sizes (2×4, 2×6, …) and fractional-inch output.
 
 ### Boards on ellipsoids and eggs

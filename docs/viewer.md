@@ -97,6 +97,11 @@ With Joint boards, the sidebar lists the board types as Acidome types them: the 
   - **Cutting order:** two passes. Pass 1 cuts one end of every board from its rough length; pass 2 cuts the other end to length against a stop. Each pass is in order of lean, then miter. Each step names the cradle, which wide face goes on the back (as on the cut drawing), which side of the blade the end lands on, the miter and the side of its long point. Where a miter would pass 45°, a fence wedge (in 5° steps) covers the rest.
   - **No-jig column:** the miter and blade bevel for the same end with the board flat on a wide face, for saws that tilt.
   - The sheet gives the tallest cut and how far from the fence the board reaches, so you can check them against your saw.
+- **Lath jig sheet** (Gridshell): the same button gives a cradle for each kind of lath crossing, to strap or bolt an A lath (outer layer) to the B lath (inner layer) it crosses while both sit as they do in the shell.
+  - **The jig:** a block whose top is a copy of the skin round the crossing, with lath B in a groove one lath deep along its line and lath A over it between two fences along its line. The pair is clamped in it to drill the bolt hole along the skin's normal, or to pass a strap through the block's slot, under B and over A. In the jig's frame z is the skin's normal and x the bisector of the two laths; the skin round the crossing is fitted as a quadric, which carries each lath's bend radius and twist (its geodesic torsion) from the lath spec.
+  - **Jigs:** crossings whose turn (the angle from lath B's line to lath A's line, seen from outside) is within 1° and whose sag over the block is within 0.5 mm share a jig. On the crown layout that is one jig per ring of crossings (or fewer); over the top, every distinct turn and curvature is a jig, and a jig's mirror image is another jig. The block's size grows with the laths' overlap, from 200 to 360 mm square.
+  - **Cards:** one per jig: the plan seen from outside (A on top, the bolt at the crossing, the strap line dashed), a section along each lath with the skin's sag over the block, and the block, groove, radii, twists, overlap and strap length. Then a table of every jig and, for each lath, the jig at each of its crossings in order from its start.
+  - **Download OpenSCAD** saves every jig as a printable solid: a table of the jigs (turn, quadric, block size) and the modules that build one, with the lath size, clearance, fences, bolt and strap as settings at the top of the file. Render one jig with `which`, or all in a row with `show_all`. **Download CSV** saves the tables.
 - **Copy link**: the viewer URL with the current settings.
 
 ### Python box
@@ -159,6 +164,7 @@ The page (`web/index.html`) holds the controls, the Three.js scene and the sheet
 | `openings.js` | panel openings between the boards |
 | `jig.js` | V-cradles, end setups and the top views for the jig sheet |
 | `gridshell.js` | geodesic laths (crown ring on round shapes, over the top on any shape), their crossings, types and splices, and the bend check |
+| `lathjig.js` | a cradle per kind of lath crossing: the jig frame, the skin's quadric, drawings and OpenSCAD |
 | `format.js` | number, inch, HTML and CSV formatting |
 | `state.js` | defaults and the URL query |
 | `sheets.js` | the cut sheet and jig sheet (HTML and CSV) |

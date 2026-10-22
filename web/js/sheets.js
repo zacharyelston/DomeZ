@@ -7,6 +7,7 @@ const { productColor, typeColor } = DomeZ.colors;
 const { boardDrawing, overallOf, boardSVG } = DomeZ.drawing;
 const { faceOpening } = DomeZ.openings;
 const { JIG, buildJigs, cradleSVG, endTopSVG } = DomeZ.jig;
+const { LATHJIG, buildLathJigs, jigPlanSVG, jigSectionSVG, lathJigSCAD } = DomeZ.lathjig;
 const { esc, mmText, inchText, fmtM, degText, rangeText } = DomeZ.format;
 
 function shapeTitle(s) {
@@ -223,6 +224,7 @@ const sideText = { right: 'right of the blade', left: 'left of the blade' };
 const faceText = { top: 'top-edge face', bottom: 'bottom-edge face' };
 
 function jigSheetHTML(M, s, href) {
+  if (M.gridshell) return lathJigSheetHTML(M, s, href);
   const L = M.lumber, J = buildJigs(L), d = designFacts(M, s);
   const mm = (m) => Math.round(m * 1000), longest = Math.max(...J.plans.map((pl) => pl.overall)) + 10;
   const reach = J.adjustable ? J.reachAdjustable : J.reach;
@@ -296,6 +298,7 @@ function jigSheetHTML(M, s, href) {
 }
 
 function jigCsvRows(M, s, href) {
+  if (M.gridshell) return lathJigCsvRows(M, s, href);
   const L = M.lumber, J = buildJigs(L), mm = (m) => Math.round(m * 1000), f1 = (a) => a.toFixed(1);
   const rows = [['DomeZ jig sheet', designFacts(M, s).title], ['Board size (mm)', `${s.beamW} x ${s.beamT}`], ['Saw', `0 bevel, miter up to ${JIG.maxMiter}`],
     ['V-cradle', J.adjustable ? 'one adjustable cradle' : `${J.cradles.length} fixed cradles`],
@@ -334,29 +337,81 @@ function cutSheetRows(M, s, href) {
   return rows;
 }
 
-/** A gridshell's facts, its bend verdict and its crossing rows, shared by the sheet and the CSV. */
+/** The joints and the stock lengths, for either layout: facts, the method, and each type's plies. */
+function gridshellStock(G, s) {
+  const st = G.stock, mm = (m) => Math.round(m * 1000), joins = G.types.map((t) => t.joins);
+  const lo = Math.min(...joins), hi = Math.max(...joins), money = (x) => (x >= 100 ? x.toFixed(0) : x.toFixed(2));
+  return {
+    facts: [['Joints per lath', lo === hi ? String(lo) : `${lo}–${hi}`], ['Stock lengths', `${st.lengths} × ${s.lathStock} mm`],
+            ...(st.price > 0 ? [['Lath cost', `≈ ${money(st.cost)} at ${st.price} a length`]] : []), ['Timber', `${st.timber.toFixed(1)} m`]],
+    method: `Each ply is laid end to end from ${s.lathStock} mm stock. ` + (st.plies > 1
+      ? `Ply 1 starts with a whole length and each further ply with a shorter piece, so the joints in neighbouring plies are staggered and every joint is bridged by the other ${st.plies === 2 ? 'ply' : 'plies'}. Screw or bolt the plies together either side of each joint.`
+      : 'With a single ply, every joint needs a splice plate: a short piece of the same lath screwed across it.') +
+      ` Joints stay ${mm(st.clear)} mm clear of the bolts, and no end piece is shorter than ${mm(st.minPiece)} mm.` +
+      ` ${st.joins} joints in all: ${st.pieces} pieces from ${st.lengths} stock lengths, ${st.whole} of them used whole and the other pieces packed into ${st.cutFrom}, with ${st.waste.toFixed(1)} m of offcuts.`,
+    plies: (t) => t.splice.map((r, k) => [`Ply ${k + 1}`, r.joints.length ? r.joints.map(mm).join(', ') : 'none', r.pieces.map(mm).join(' + ')]),
+  };
+}
+
+const pliesTable = (rows) => `<div class="tablewrap-x"><table>
+      <thead><tr><th>Ply</th><th>Joints, mm from the start</th><th>Pieces, mm</th></tr></thead>
+      <tbody>${rows.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td class="seq">${esc(b)}</td><td class="seq">${esc(c)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+
+const verdictOf = (B) => (B.ratio > 1
+  ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less, and more of them for the same section.`
+  : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), within the ${B.allowable} MPa allowed.`);
+
+const PROTOTYPE = 'Prototype: this is geometry plus a simple bend check. The plies are taken as unglued, so each bends on its own thickness: stress = E × ply thickness ÷ (2 × bend radius). Twist, buckling, snow and wind loads, the joints and the bolted crossings still need an engineer’s check.';
+
+/** A crown gridshell's facts, its bend verdict and its crossing rows, shared by the sheet and the CSV. */
 function gridshellParts(M, s) {
   const G = M.gridshell, B = G.bend, mm = (m) => Math.round(m * 1000), deg = (r) => (r * 180 / Math.PI).toFixed(1) + '°';
-  const over = B.ratio > 1;
+  const over = B.ratio > 1, stock = gridshellStock(G, s);
   return {
-    G, B, mm, deg, over,
+    G, B, mm, deg, over, stock,
     facts: [['Laths', `${2 * G.N} (${G.N} + ${G.N} mirrored)`], ['Lath length', `${mm(G.length)} mm`],
             ['Section', `${B.width} × ${B.ply} mm, ${B.plies} ${B.plies === 1 ? 'ply' : 'plies'}`], ['Crossings', G.crossings],
             ['Base ring', `Ø ${mm(2 * G.rhoBase)} mm`], ['Crown ring', `Ø ${mm(2 * G.c)} mm`], ['Crown height', `${mm(G.tCrown - G.tBase)} mm up`],
             ['Tightest bend', `${B.minRadius.toFixed(2)} m`], ['Ply stress', `${B.maxStress.toFixed(1)} of ${B.allowable} MPa`],
-            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`]],
-    verdict: over
-      ? `Too stiff to bend this far: ${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), over the ${B.allowable} MPa allowed. Use plies of ${B.maxPly.toFixed(1)} mm or less, and more of them for the same section.`
-      : `${B.ply} mm plies reach ${B.maxStress.toFixed(1)} MPa at the tightest bend (${B.minRadius.toFixed(2)} m radius), within the ${B.allowable} MPa allowed.`,
+            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`], ...stock.facts],
+    verdict: verdictOf(B),
     setOut: `Set out ${G.N} points evenly on the base ring, every ${(360 / G.N).toFixed(2)}°. From each point an A lath leaves leaning ${deg(G.psi)} from the vertical one way, and a B lath ${deg(G.psi)} the other way. A laths run in the outer layer and B laths in the inner layer. Each A lath crosses a B lath at every row of the table, where the two are bolted. Every lath ends on the crown ring, running level along it, having turned ${deg(G.crownTurn)} around the dome.`,
   };
 }
 
-/** The gridshell sheet: the lath (every lath is the same; B laths are mirror images), where it crosses, and the bend check. */
+/** An over-the-top gridshell's facts, verdict, setting-out text and per-lath rows. */
+function overParts(M, s) {
+  const G = M.gridshell, B = G.bend, mm = (m) => Math.round(m * 1000), deg = (r) => (r * 180 / Math.PI).toFixed(1) + '°';
+  const stock = gridshellStock(G, s), axis = G.ridge.along[1] ? 'Y' : 'X';
+  const name = (l) => `${l.family}${l.i + 1}`;
+  const endOf = (l, start) => {
+    const on = start ? l.startOn : l.endOn, q = l.samples[start ? 0 : l.samples.length - 1].p;
+    return on ? `on ${on.family}${on.i + 1}, ${mm(on.s)} mm along it` : `base at X ${mm(q[0])}, Y ${mm(q[1])}`;
+  };
+  return {
+    G, B, mm, deg, over: B.ratio > 1, stock, axis, name, endOf,
+    facts: [['Laths', `${2 * G.N} (${G.N} + ${G.N} mirrored)`], ['Lath types', G.types.length], ['Lath lengths', `${mm(G.shortest)}–${mm(G.length)} mm`],
+            ['Section', `${B.width} × ${B.ply} mm, ${B.plies} ${B.plies === 1 ? 'ply' : 'plies'}`], ['Crossings', G.crossings],
+            ['Base', `${mm(2 * G.base[0])} × ${mm(2 * G.base[1])} mm`], ['Ridge', `${mm(G.ridge.length)} mm`], ['Ridge spacing', `${mm(G.ridge.spacing)} mm`],
+            ['Tightest bend', `${B.minRadius.toFixed(2)} m`], ['Ply stress', `${B.maxStress.toFixed(1)} of ${B.allowable} MPa`],
+            ['Thickest safe ply', `${B.maxPly.toFixed(1)} mm`], ['Most twist', `${B.maxTwist.toFixed(1)}°/m`], ...stock.facts],
+    verdict: verdictOf(B),
+    setOut: `Mark the ridge, the line over the top along the ${axis} axis, ${mm(G.ridge.length)} mm from base to base, measuring from its −${axis} end. Each lath crosses the ridge at the distance in the table, ${deg(G.psi)} from the fall line there: A laths one way, B laths the other. A laths run in the outer layer and B laths in the inner layer, and each A lath is bolted to each B lath it crosses. A lath starts on the base, at the point given from the centre of the base, and runs over the ridge to its far end.${G.trimmed ? ` Near the ends, where laths of one family converge, ${G.trimmed} lath ends stop on a lath of their own family instead, bolted to it.` : ''}`,
+    templates: 'Laths of one type share a drilling template, marked from the start end. A lath listed as reversed takes the template from its far end, and B laths, mirror images, take it turned over. Distances run along the lath’s centre line.',
+  };
+}
+
+const crossingRows = (list, mm) => list.map((n, k) => `<tr>
+      <td>${k + 1}</td><td class="n">${mm(n.s)}</td><td class="n">${mm(n.rise)}</td><td class="n">${n.angle.toFixed(1)}°</td>
+      <td class="n">${Number.isFinite(n.radius) ? n.radius.toFixed(2) : '—'}</td></tr>`).join('');
+
+/** The gridshell sheet: the laths, where they cross, where they are joined, and the bend check. */
 function gridshellSheetHTML(M, s, href) {
   const d = designFacts(M, s);
   if (!M.gridshell.ok) return `<h1>Gridshell · ${esc(d.title)}</h1><p class="sub">${esc(M.gridshell.reason)}</p>`;
-  const { G, mm, deg, over, facts, verdict, setOut } = gridshellParts(M, s);
+  if (M.gridshell.layout === 'over') return overSheetHTML(M, s, href, d);
+  const { G, mm, deg, over, facts, verdict, setOut, stock } = gridshellParts(M, s);
   const rows = G.nodes.map((n) => `<tr>
       <td class="big">${n.k ? n.k : 'base'}</td>
       <td class="n big">${mm(n.s)}</td>
@@ -375,26 +430,171 @@ function gridshellSheetHTML(M, s, href) {
       <thead><tr><th>Crossing</th><th class="n">Along the lath, mm</th><th class="n">Height above base, mm</th><th class="n">Angle between laths</th><th class="n">Bend radius, m</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
+    <h3>Joints</h3>
+    ${pliesTable(stock.plies(G.types[0]))}
+    <p class="note">${esc(stock.method)}</p>
 
     <h2>Setting out</h2>
     <p class="note">${esc(setOut)}</p>
-    <p class="note">Prototype: this is geometry plus a simple bend check. The plies are taken as unglued, so each bends on its own thickness: stress = E × ply thickness ÷ (2 × bend radius). Twist, buckling, snow and wind loads, and the bolted crossings still need an engineer's check.</p>
+    <p class="note">${esc(PROTOTYPE)}</p>
+    <p class="note link">Design link: ${esc(href)}</p>`;
+}
+
+function overSheetHTML(M, s, href, d) {
+  const { G, mm, deg, over, facts, verdict, setOut, templates, stock, name, endOf } = overParts(M, s);
+  const types = G.types.map((t) => `
+    <h3>${esc(t.label)} · ${mm(t.length)} mm · ${t.members.length} ${t.members.length === 1 ? 'lath' : 'laths'}: ${esc(t.members.map((l) => name(l) + (l.reversed ? ' (reversed)' : '')).join(', '))}</h3>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Crossing</th><th class="n">Along the lath, mm</th><th class="n">Height above base, mm</th><th class="n">Angle between laths</th><th class="n">Bend radius, m</th></tr></thead>
+      <tbody>${crossingRows(t.rep.crossings, mm)}</tbody>
+    </table></div>
+    <p class="note">Joints, ${t.joins} per lath:</p>
+    ${pliesTable(stock.plies(t))}`).join('');
+  const laths = G.laths.map((l) => `<tr>
+      <td>${name(l)}</td><td>${esc(G.types[l.type].label)}${l.reversed ? ' <span class="tag">reversed</span>' : ''}</td>
+      <td class="n">${mm(l.sigma)}</td><td>${esc(endOf(l, true))}</td><td>${esc(endOf(l, false))}</td><td class="n">${mm(l.length)}</td></tr>`).join('');
+  return `
+    <h1>Gridshell · ${esc(d.title)}</h1>
+    <p class="sub">${d.lines.filter(([k]) => k === 'Shape' || k === 'Cut').map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')} &nbsp;·&nbsp; <b>Laths:</b> ${G.N} per family over the top, crossing the ridge at ${deg(G.psi)} from the fall line</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+    <p class="note"${over ? ' style="color:var(--warn)"' : ''}>${esc(verdict)}</p>
+
+    <h2>Lath types</h2>
+    <p class="note">${esc(templates)}</p>
+    ${types}
+    <p class="note">${esc(stock.method)}</p>
+
+    <h2>Setting out</h2>
+    <p class="note">${esc(setOut)}</p>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Lath</th><th>Type</th><th class="n">Ridge at, mm</th><th>Start</th><th>Far end</th><th class="n">Length, mm</th></tr></thead>
+      <tbody>${laths}</tbody>
+    </table></div>
+    <p class="note">${esc(PROTOTYPE)}</p>
     <p class="note link">Design link: ${esc(href)}</p>`;
 }
 
 function gridshellSheetRows(M, s, href) {
   const d = designFacts(M, s);
   if (!M.gridshell.ok) return [['DomeZ gridshell', d.title], ['Note', M.gridshell.reason]];
-  const { G, mm, facts, verdict, setOut } = gridshellParts(M, s);
+  if (M.gridshell.layout === 'over') return overSheetRows(M, s, href, d);
+  const { G, mm, facts, verdict, setOut, stock } = gridshellParts(M, s);
   const rows = [['DomeZ gridshell', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, ['Bend check', verdict], []];
   rows.push(['The lath (every lath the same; B laths mirrored)'], ['Crossing', 'Along the lath (mm)', 'Height above base (mm)', 'Angle between laths (deg)', 'Bend radius (m)']);
   for (const n of G.nodes) rows.push([n.k ? n.k : 'base', mm(n.s), mm(n.rise), n.angle.toFixed(1), Number.isFinite(n.radius) ? n.radius.toFixed(2) : '']);
+  rows.push([], ['Ply', 'Joints (mm from the start)', 'Pieces (mm)'], ...stock.plies(G.types[0]), ['Joints', stock.method]);
   rows.push([], ['Setting out', setOut]);
   return rows;
+}
+
+function overSheetRows(M, s, href, d) {
+  const { G, mm, facts, verdict, setOut, templates, stock, name, endOf } = overParts(M, s);
+  const rows = [['DomeZ gridshell', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, ['Bend check', verdict], []];
+  rows.push(['Lath types', templates]);
+  for (const t of G.types) {
+    rows.push([], [`Type ${t.label}`, `${mm(t.length)} mm`, t.members.map((l) => name(l) + (l.reversed ? ' (reversed)' : '')).join(' ')]);
+    rows.push(['Crossing', 'Along the lath (mm)', 'Height above base (mm)', 'Angle between laths (deg)', 'Bend radius (m)']);
+    t.rep.crossings.forEach((n, k) => rows.push([k + 1, mm(n.s), mm(n.rise), n.angle.toFixed(1), n.radius.toFixed(2)]));
+    rows.push(['Ply', 'Joints (mm from the start)', 'Pieces (mm)'], ...stock.plies(t));
+  }
+  rows.push([], ['Joints', stock.method], [], ['Setting out', setOut], ['Lath', 'Type', 'Ridge at (mm)', 'Start', 'Far end', 'Length (mm)']);
+  for (const l of G.laths) rows.push([name(l), G.types[l.type].label + (l.reversed ? ' reversed' : ''), mm(l.sigma), endOf(l, true), endOf(l, false), mm(l.length)]);
+  return rows;
+}
+
+/* ---- Lath jigs: a cradle for each kind of crossing of a gridshell ---- */
+
+/** The lath jig sheet's shared parts: the jigs, each one's turn and where it serves, and the facts. */
+function lathJigParts(M, s) {
+  const G = M.gridshell, J = buildLathJigs(G, s), mm = (m) => Math.round(m * 1000);
+  const turn = (j) => `${degText(j.theta)} ${j.phi >= 0 ? 'anticlockwise' : 'clockwise'}`;
+  const where = (j) => (G.layout === 'crown'
+    ? `crossing${j.rings.length > 1 ? 's' : ''} ${j.rings.join(', ')} of every lath, ${mm(j.rise[0])}${j.rise[1] - j.rise[0] > 0.0005 ? `–${mm(j.rise[1])}` : ''} mm up`
+    : `${j.count} crossing${j.count > 1 ? 's' : ''}, ${mm(j.rise[0])}${j.rise[1] - j.rise[0] > 0.0005 ? `–${mm(j.rise[1])}` : ''} mm up`);
+  const R = (r) => (Number.isFinite(r) ? `${r.toFixed(2)} m` : 'flat');
+  const facts = [['Crossings', J.crossings], ['Jigs', J.jigs.length], ['Lath', `${s.lathW} × ${mm(J.stack)} mm (${s.lathPlies} × ${s.lathT})`],
+    ['Turn, A over B', rangeText(J.turn)], ['Bend radii', Number.isFinite(J.radius[0]) ? `${J.radius[0].toFixed(2)}–${J.radius[1].toFixed(2)} m` : '—'],
+    ['Blocks', `${mm(2 * J.reach[0])}–${mm(2 * J.reach[1])} mm square`], ['Skin fit', `within ${(J.worst * 1000).toFixed(1)} mm`],
+    ['Strap round a crossing', `${mm(J.strap[0])}–${mm(J.strap[1])} mm`], ['Strap in all', `${J.strapTotal.toFixed(1)} m + seals`]];
+  return { G, J, mm, turn, where, R, facts };
+}
+
+/** The lath jig sheet: a card per jig with its plan and sections, every jig in a table, and which jig
+    each lath meets at each crossing. */
+function lathJigSheetHTML(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G.ok) return `<h1>Lath jig sheet · ${esc(d.title)}</h1><p class="sub">${esc(G.reason)}</p>`;
+  const { J, mm, turn, where, R, facts } = lathJigParts(M, s), f1 = (x) => x.toFixed(1);
+  if (!J.jigs.length) return `<h1>Lath jig sheet · ${esc(d.title)}</h1><p class="sub">The laths never cross above the base, so there is nothing to jig.</p>`;
+  const cards = J.jigs.map((j) => `
+    <div class="cradle-card">
+      <div class="drawing-head"><span class="dot jig">${j.name}</span><b>A over B, turned ${esc(turn(j))}</b> · ${esc(where(j))}</div>
+      ${jigPlanSVG(j)}
+      ${jigSectionSVG(j, 'A')}
+      ${jigSectionSVG(j, 'B')}
+      <div class="small-facts">Block ${mm(2 * j.reach)} × ${mm(2 * j.reach)} mm, ${mm(j.depth)} mm tall at the centre; groove ${mm(j.w + 2 * LATHJIG.clearance)} wide and ${mm(j.stack)} deep along B, fences ${mm(LATHJIG.fence)} mm along A. Bend radius ${R(j.RA)} along A and ${R(j.RB)} along B, so the top sags ${f1(j.sagA * 1000)} and ${f1(j.sagB * 1000)} mm to the block's edge; twist ${f1(Math.abs(j.twistA))}° along A and ${f1(Math.abs(j.twistB))}° along B over the block. The laths overlap ${j.overlap.long > 1 ? 'over 1000' : mm(j.overlap.long)} × ${mm(j.overlap.short)} mm${j.overlap.long > 2 * j.reach ? ', longer than the block' : ''}. Skin fit within ${(j.worst * 1000).toFixed(1)} mm. Strap round the crossing ${mm(j.strapRound)} mm plus the seal.</div>
+    </div>`).join('');
+  const rows = J.jigs.map((j) => `<tr>
+      <td class="big">${j.name}</td><td class="n big">${esc(turn(j))}</td><td class="n">${j.count}</td><td>${esc(where(j))}</td>
+      <td class="n">${R(j.RA)}</td><td class="n">${R(j.RB)}</td><td class="n">${f1(j.sagA * 1000)} / ${f1(j.sagB * 1000)}</td>
+      <td class="n">${f1(Math.abs(j.twistA))}° / ${f1(Math.abs(j.twistB))}°</td><td class="n">${mm(2 * j.reach)}</td><td class="n">${mm(j.strapRound)}</td></tr>`).join('');
+  const along = G.layout === 'crown'
+    ? `<p class="note">Every lath is the same, so every lath meets the jigs in the same order from its base end: ${esc(J.byLath[0].map((n, k) => `${n} at crossing ${k + 1}`).join(', '))}. A jig holds one A lath over one B lath, so the B laths take the same jigs at the same crossings.</p>`
+    : `<div class="tablewrap-x"><table>
+      <thead><tr><th>Lath</th><th>Type</th><th>Jig at each crossing, from the lath's start</th></tr></thead>
+      <tbody>${G.laths.map((l, k) => `<tr><td>${l.family}${l.i + 1}</td><td>${esc(G.types[l.type].label)}${l.reversed ? ' <span class="tag">reversed</span>' : ''}</td><td class="seq">${esc(J.byLath[k].join(' '))}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  const many = J.jigs.length > 12 ? `<p class="note">This design needs ${J.jigs.length} different jigs: the laths meet at many turns and the skin's curvature changes along them. For a plywood build, make one flat block per turn and shim its groove to the sag; for printing, the OpenSCAD file renders them all in a row.</p>` : '';
+  return `
+    <h1>Lath jig sheet · ${esc(d.title)}</h1>
+    <p class="sub">Where an <b>A lath</b> (outer layer) crosses a <b>B lath</b> (inner layer), both bent to the skin, a <b>cradle</b> holds them as they sit in the shell: a block whose top copies the skin round the crossing, with lath B in a groove one lath deep and lath A over it between two fences. Clamp the pair in it to drill the bolt hole square to the skin, or to strap them together, then move on to the next crossing.</p>
+    <div class="facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>
+    <p class="note">The turn is the angle from lath B's line to lath A's line, seen from outside, so a jig and its mirror image are two jigs. The bend radii and twists are the skin's along each lath at the crossing, straight from the lath spec; the top of each block is the skin itself, fitted as a quadric, which carries them both. Crossings whose turn is within ${LATHJIG.angleStep}° and whose sag over the block is within ${LATHJIG.sagStep * 1000} mm share a jig.</p>
+    ${many}
+
+    <h2>Jigs to make</h2>
+    <p class="note">Each card shows the jig from outside (lath A on top, the bolt at the crossing, the strap line dashed), then a section along each lath's centre line with the skin's sag over the block. <b>Download OpenSCAD</b> gives every block as a printable solid, with the lath size, clearance, fences, bolt and strap as settings at the top of the file; or cut a flat block to the plan and shim the groove's bed to the sag.</p>
+    <div class="lathjig-grid">${cards}</div>
+
+    <h2>All jigs</h2>
+    <div class="tablewrap-x"><table>
+      <thead><tr><th>Jig</th><th class="n">Turn, A over B</th><th class="n">Crossings</th><th>Where</th><th class="n">R along A</th><th class="n">R along B</th><th class="n">Sag A / B, mm</th><th class="n">Twist A / B</th><th class="n">Block, mm</th><th class="n">Strap, mm</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+
+    <h2>Jigs along the laths</h2>
+    ${along}
+    <p class="note">Using a jig: set the block under the crossing with the groove along lath B and the fences along lath A, lay lath B in the groove and lath A over it, clamp, and drill through both on the block's axis (the skin's normal) for the bolt; or pass a strap through the block's slot, under lath B and over lath A, pull it tight and seal it. Strap lengths are the distance round the two laths; add your sealing overlap. A lath end that stops on a lath of its own family is a lap, not a crossing, and is not jigged here.</p>
+    <p class="note">${esc(PROTOTYPE)}</p>
+    <p class="note link">Design link: ${esc(href)}</p>`;
+}
+
+function lathJigCsvRows(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G.ok) return [['DomeZ lath jig sheet', d.title], ['Note', G.reason]];
+  const { J, mm, where, facts } = lathJigParts(M, s), f1 = (x) => x.toFixed(1), f4 = (x) => x.toFixed(4);
+  const rows = [['DomeZ lath jig sheet', d.title], ...d.lines.filter(([k]) => k === 'Shape' || k === 'Cut'), ['Design link', href], [], ...facts, []];
+  rows.push(['Jig', 'Turn A over B (deg, + anticlockwise seen from outside)', 'Crossings', 'Where', 'Height above base (mm)', 'R along A (m)', 'R along B (m)',
+    'Sag along A (mm)', 'Sag along B (mm)', 'Twist along A (deg over the block)', 'Twist along B (deg over the block)', 'Block (mm square)', 'Block tall at the centre (mm)',
+    'Overlap long (mm)', 'Overlap short (mm)', 'Strap round (mm)', 'Skin fit (mm)', 'L (1/m)', 'M (1/m)', 'N (1/m)']);
+  for (const j of J.jigs) rows.push([j.name, f1(j.phi), j.count, where(j), j.rise[1] - j.rise[0] > 0.0005 ? `${mm(j.rise[0])}-${mm(j.rise[1])}` : mm(j.rise[0]),
+    Number.isFinite(j.RA) ? j.RA.toFixed(3) : '', Number.isFinite(j.RB) ? j.RB.toFixed(3) : '', f1(j.sagA * 1000), f1(j.sagB * 1000), f1(Math.abs(j.twistA)), f1(Math.abs(j.twistB)),
+    mm(2 * j.reach), mm(j.depth), mm(Math.min(j.overlap.long, 10)), mm(j.overlap.short), mm(j.strapRound), (j.worst * 1000).toFixed(2), f4(j.L), f4(j.M), f4(j.N)]);
+  rows.push([], ['Jigs along the laths'], ['Lath', 'Type', 'Jig at each crossing from the start']);
+  G.laths.forEach((l, k) => rows.push([`${l.family}${l.i + 1}`, G.types[l.type].label + (l.reversed ? ' reversed' : ''), J.byLath[k].join(' ')]));
+  return rows;
+}
+
+/** Every jig of a gridshell as OpenSCAD source. */
+function lathJigScadText(M, s, href) {
+  const d = designFacts(M, s), G = M.gridshell;
+  if (!G || !G.ok) return `// DomeZ lath crossing jigs · ${d.title}\n// ${G ? G.reason : 'Not a gridshell design.'}\n`;
+  return lathJigSCAD(buildLathJigs(G, s), s, d.title, href);
 }
 
 DomeZ.sheets = {
   sideText, faceText, shapeTitle, designFacts, boardsAroundHub, sawText, lumberSheetHTML, cutSheetHTML,
   lumberSheetRows, cutSheetRows, jigSheetHTML, jigCsvRows, gridshellSheetHTML, gridshellSheetRows,
+  lathJigSheetHTML, lathJigCsvRows, lathJigScadText,
 };
 })(globalThis.DomeZ = globalThis.DomeZ || {});
